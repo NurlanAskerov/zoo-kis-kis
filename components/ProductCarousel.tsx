@@ -7,22 +7,47 @@ import { ProductCard } from './ProductCard';
 
 export function ProductCarousel({ items }: { items: Product[] }) {
   const marqueeRef = useRef<HTMLDivElement | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
   const source = items.length > 0 ? items : [];
   const loop = useMemo(() => source, [source]);
+
+  function getStep() {
+    const marquee = marqueeRef.current;
+    if (!marquee) return Math.round(window.innerWidth * 0.82);
+
+    const firstCard = marquee.querySelector<HTMLElement>('.marquee-card');
+    const gap = window.matchMedia('(max-width: 768px)').matches ? 14 : 20;
+    return (firstCard?.offsetWidth ?? Math.round(window.innerWidth * 0.78)) + gap;
+  }
 
   function scrollOne(direction: 'left' | 'right') {
     const marquee = marqueeRef.current;
     if (!marquee) return;
 
-    const firstCard = marquee.querySelector<HTMLElement>('.marquee-card');
-    const gap = window.matchMedia('(max-width: 768px)').matches ? 14 : 20;
-    const step = (firstCard?.offsetWidth ?? Math.round(window.innerWidth * 0.78)) + gap;
+    const step = getStep();
     const nextLeft = direction === 'right' ? marquee.scrollLeft + step : marquee.scrollLeft - step;
 
     marquee.scrollTo({
       left: Math.max(0, nextLeft),
       behavior: 'smooth'
     });
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+  }
+
+  function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    const startX = touchStartXRef.current;
+    const endX = event.changedTouches[0]?.clientX ?? null;
+    touchStartXRef.current = null;
+
+    if (startX === null || endX === null) return;
+
+    const delta = startX - endX;
+    if (Math.abs(delta) < 36) return;
+
+    scrollOne(delta > 0 ? 'right' : 'left');
   }
 
   useEffect(() => {
@@ -38,9 +63,7 @@ export function ProductCarousel({ items }: { items: Product[] }) {
       }
 
       timer = window.setInterval(() => {
-        const firstCard = marquee.querySelector<HTMLElement>('.marquee-card');
-        const gap = window.matchMedia('(max-width: 768px)').matches ? 14 : 20;
-        const step = (firstCard?.offsetWidth ?? Math.round(window.innerWidth * 0.78)) + gap;
+        const step = getStep();
         const nearEnd = marquee.scrollLeft + marquee.clientWidth + step >= marquee.scrollWidth - 8;
 
         if (nearEnd) {
@@ -72,7 +95,13 @@ export function ProductCarousel({ items }: { items: Product[] }) {
         </button>
       ) : null}
 
-      <div className="marquee" aria-label="Product carousel" ref={marqueeRef}>
+      <div
+        className="marquee"
+        aria-label="Product carousel"
+        ref={marqueeRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="marquee-track">
           {loop.map((product, index) => (
             <div className="marquee-card" key={`${product.slug}-${index}`}>

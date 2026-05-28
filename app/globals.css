@@ -3319,3 +3319,45 @@ body:has(.modal-backdrop) .header {
     border-radius: 18px;
   }
 }
+
+
+/* v32: reliable mobile swipe for product carousels */
+.marquee {
+  touch-action: pan-x;
+  overscroll-behavior-inline: contain;
+  cursor: grab;
+}
+
+.marquee:active {
+  cursor: grabbing;
+}
+
+.marquee-track {
+  will-change: scroll-position;
+}
+
+.marquee-card,
+.marquee-card .product-card,
+.marquee-card .product-media {
+  touch-action: pan-x;
+}
+
+@media (max-width: 980px) {
+  .carousel-section {
+    overflow: visible;
+  }
+
+  .carousel-shell {
+    margin-inline: -11px;
+  }
+
+  .marquee {
+    padding-left: 11px;
+    padding-right: 11px;
+    scroll-padding-left: 11px;
+  }
+
+  .marquee-card {
+    scroll-snap-align: center;
+  }
+}
