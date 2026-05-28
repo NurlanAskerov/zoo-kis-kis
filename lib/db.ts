@@ -345,9 +345,12 @@ export function normalizeProduct(input: Partial<Product>): Product {
 
   const image = input.image || input.images?.[0] || '/products/cat-food.svg';
   const typeKey = validProductTypes.has(input.typeKey as ProductTypeKey) ? input.typeKey as ProductTypeKey : fallback.typeKey;
-  const audiences = input.audiences?.filter(item => validAudiences.has(item)).length
-    ? input.audiences.filter(item => validAudiences.has(item))
-    : ['allPets'];
+
+  const normalizedAudiences: AudienceKey[] = (input.audiences ?? [])
+    .filter((item): item is AudienceKey => validAudiences.has(item as AudienceKey));
+
+  const normalizedCollections: ProductCollectionKey[] = (input.collections ?? [])
+    .filter((item): item is ProductCollectionKey => validCollections.has(item as ProductCollectionKey));
 
   return {
     id: input.id || slug,
@@ -355,8 +358,8 @@ export function normalizeProduct(input: Partial<Product>): Product {
     name: input.name ?? { az: nameAz, en: nameAz, ru: nameAz },
     categoryKey: input.categoryKey || categoryKeyFromType(typeKey),
     typeKey,
-    audiences,
-    collections: input.collections?.filter(item => validCollections.has(item)) ?? [],
+    audiences: normalizedAudiences.length ? normalizedAudiences : ['allPets'],
+    collections: normalizedCollections,
     price: Number(input.price || 0),
     oldPrice: input.oldPrice ? Number(input.oldPrice) : undefined,
     image,

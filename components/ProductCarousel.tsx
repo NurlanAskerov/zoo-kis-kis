@@ -14,10 +14,14 @@ export function ProductCarousel({ items }: { items: Product[] }) {
     if (!marquee || source.length === 0) return;
 
     const media = window.matchMedia('(max-width: 768px)');
-    let timer: ReturnType<typeof window.setInterval> | undefined;
+    let timer: number | null = null;
 
     const startMobileSlider = () => {
-      if (timer) window.window.clearInterval(timer);
+      if (timer !== null) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+
       if (!media.matches) return;
 
       timer = window.setInterval(() => {
@@ -38,7 +42,11 @@ export function ProductCarousel({ items }: { items: Product[] }) {
     media.addEventListener('change', startMobileSlider);
 
     return () => {
-      if (timer) window.window.clearInterval(timer);
+      if (timer !== null) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+
       media.removeEventListener('change', startMobileSlider);
     };
   }, [source.length]);
