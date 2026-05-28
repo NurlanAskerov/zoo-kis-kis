@@ -473,6 +473,41 @@ export async function getAllProductsForAdmin() {
   return getProductsFromDb(true);
 }
 
+export async function getProductBySlugFromDb(slug: string, includeInactive = true): Promise<Product | undefined> {
+  const cleanSlug = String(slug || '').trim();
+  if (!cleanSlug) return undefined;
+
+  if (!hasDatabaseConfig()) {
+    const product = products.find(item => item.slug === cleanSlug);
+    return includeInactive ? product : (product?.active === false ? undefined : product);
+  }
+
+  const mode = await getProductSchemaMode();
+
+  if (mode === 'legacy') {
+    const result = await getTursoClient().execute({
+      sql: 'SELECT payload, active FROM products WHERE slug = ? LIMIT 1',
+      args: [cleanSlug]
+    });
+    const product = result.rows[0] ? legacyProductFromRow(result.rows[0] as Record<string, unknown>) ?? undefined : undefined;
+    return includeInactive ? product : (product?.active === false ? undefined : product);
+  }
+
+  const result = await getTursoClient().execute({
+    sql: 'SELECT * FROM products WHERE slug = ? LIMIT 1',
+    args: [cleanSlug]
+  });
+
+  const row = result.rows[0] as Record<string, unknown> | undefined;
+  if (!row) return undefined;
+
+  const productId = String(row.id || row.slug || '').trim();
+  const imagesMap = await getImagesMap(productId ? [productId] : []);
+  const product = wideProductFromRow(row, imagesMap);
+
+  return includeInactive ? product : (product.active === false ? undefined : product);
+}
+
 async function upsertLegacyProduct(product: Product) {
   const normalized = normalizeProduct(product);
   const payload = JSON.stringify(normalized);

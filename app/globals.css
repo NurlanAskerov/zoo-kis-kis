@@ -3661,3 +3661,16 @@ textarea,
     max-width: 310px;
   }
 }
+
+
+/* v39: product detail never blank */
+.detail-loading-note {
+  display: inline-flex;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 253, 240, .86);
+  color: var(--green-deep);
+  font-weight: 800;
+}

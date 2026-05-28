@@ -1,6 +1,26 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isAdminRequest } from '@/lib/admin-auth';
-import { hasDatabaseConfig, setProductActive } from '@/lib/db';
+import { getProductBySlugFromDb, hasDatabaseConfig, setProductActive } from '@/lib/db';
+
+export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+
+  try {
+    const product = await getProductBySlugFromDb(id, true);
+    if (!product) {
+      return NextResponse.json({ ok: false, product: null, message: 'Məhsul tapılmadı.' }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true, product });
+  } catch (error) {
+    console.error('/api/products/[id] GET error', error);
+    return NextResponse.json({
+      ok: false,
+      product: null,
+      message: error instanceof Error ? error.message : 'Məhsul oxunmadı.'
+    }, { status: 500 });
+  }
+}
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   if (!(await isAdminRequest())) {
