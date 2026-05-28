@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+  <rect width="640" height="640" rx="78" fill="#fff2df"/>
+  <circle cx="500" cy="125" r="72" fill="#8adf20" opacity="0.25"/>
+  <circle cx="118" cy="520" r="98" fill="#8adf20" opacity="0.15"/>
+  <rect x="165" y="164" width="310" height="330" rx="42" fill="#fff" stroke="#e3edc9" stroke-width="8"/>
+  <rect x="198" y="205" width="244" height="48" rx="24" fill="#8adf20" opacity="0.85"/>
+  <text x="320" y="358" text-anchor="middle" font-size="118" font-family="Arial, Helvetica, sans-serif">🐱</text>
+  <text x="320" y="440" text-anchor="middle" font-size="32" font-weight="800" fill="#2d3a25" font-family="Arial, Helvetica, sans-serif">Premium Cat Food</text>
+  <path d="M228 280h184" stroke="#edf3d8" stroke-width="12" stroke-linecap="round"/>
+  <path d="M238 474h164" stroke="#edf3d8" stroke-width="12" stroke-linecap="round"/>
+</svg>

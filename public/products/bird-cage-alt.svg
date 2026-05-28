@@ -1,0 +1,10 @@
+<svg width="420" height="420" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="420" height="420" rx="52" fill="#fffdf0"/>
+  <circle cx="130" cy="115" r="54" fill="#54a938" fill-opacity="0.18"/>
+  <circle cx="320" cy="305" r="62" fill="#80c8e8" fill-opacity="0.16"/>
+  <path d="M84 288C117 238 144 215 187 222C229 229 249 270 291 252C315 242 335 222 356 196" stroke="#54a938" stroke-width="16" stroke-linecap="round" stroke-opacity="0.26"/>
+  <rect x="86" y="88" width="248" height="248" rx="42" fill="white" fill-opacity="0.72" stroke="#54a938" stroke-width="6" stroke-opacity="0.22"/>
+  <text x="210" y="248" text-anchor="middle" font-size="132" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">🐦</text>
+  <circle cx="110" cy="322" r="16" fill="#54a938" fill-opacity="0.34"/>
+  <circle cx="302" cy="98" r="12" fill="#80c8e8" fill-opacity="0.38"/>
+</svg>
