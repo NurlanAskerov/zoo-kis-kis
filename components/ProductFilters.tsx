@@ -36,7 +36,7 @@ const validCollection = (value?: string): FilterValue<ProductCollectionKey> => c
 
 export function ProductFilters({ initialAudience, initialType, initialDepartment, initialCollection }: ProductFiltersProps) {
   const { t, lang } = useLanguage();
-  const { products } = useCatalog();
+  const { products, loading } = useCatalog();
 
   const initialSubcategory = validSubcategory(initialType);
   const inferredDepartment = initialSubcategory === 'all' ? validDepartment(initialDepartment) : getDepartmentForProductType(initialSubcategory);
@@ -157,10 +157,14 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
         <section className="catalog-main">
           <div className="filter-summary rich-filter-summary">
             <span>{summaryText}</span>
-            <strong>{filtered.length} {t('results')}</strong>
+            <strong>{loading ? 'Yüklənir...' : `${filtered.length} ${t('results')}`}</strong>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="product-grid catalog-product-grid product-skeleton-grid" aria-label="Məhsullar yüklənir">
+              {Array.from({ length: 6 }).map((_, index) => <div className="product-skeleton-card" key={index} />)}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="empty small-empty">
               <h2>{t('noProducts')}</h2>
               <button type="button" className="btn btn-primary" onClick={clear}>{t('clearFilters')}</button>

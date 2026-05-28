@@ -381,17 +381,35 @@ function legacyProductFromRow(row: Record<string, unknown>): Product | null {
   }
 }
 
-async function getImages(productId: string) {
+async function getImagesMap(productIds: string[]) {
+  const uniqueIds = Array.from(new Set(productIds.map(id => String(id || '').trim()).filter(Boolean)));
+  const map = new Map<string, string[]>();
+
+  if (!uniqueIds.length) return map;
+
+  const placeholders = uniqueIds.map(() => '?').join(',');
   const result = await getTursoClient().execute({
-    sql: 'SELECT image_url FROM product_images WHERE product_id = ? ORDER BY is_main DESC, sort_order ASC, id ASC',
-    args: [productId]
+    sql: `SELECT product_id, image_url FROM product_images WHERE product_id IN (${placeholders}) ORDER BY is_main DESC, sort_order ASC, id ASC`,
+    args: uniqueIds
   });
-  return result.rows.map(row => String((row as Record<string, unknown>).image_url || '')).filter(Boolean);
+
+  result.rows.forEach(row => {
+    const data = row as Record<string, unknown>;
+    const productId = String(data.product_id || '').trim();
+    const imageUrl = String(data.image_url || '').trim();
+    if (!productId || !imageUrl) return;
+
+    const existing = map.get(productId) ?? [];
+    existing.push(imageUrl);
+    map.set(productId, existing);
+  });
+
+  return map;
 }
 
-async function wideProductFromRow(row: Record<string, unknown>): Promise<Product> {
+function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<string, string[]>()): Product {
   const typeKey = typeFromDb(row.subcategory);
-  const tableImages = await getImages(String(row.id || row.slug));
+  const tableImages = imagesMap.get(String(row.id || row.slug)) ?? [];
   const jsonImages = parseImagesJson(row.images_json);
   const imageUrl = getString(row, 'image_url');
   const images = tableImages.length ? tableImages : (jsonImages.length ? jsonImages : (imageUrl ? [imageUrl] : []));
@@ -442,10 +460,12 @@ export async function getProductsFromDb(includeInactive = false) {
   }
 
   const result = await getTursoClient().execute('SELECT * FROM products ORDER BY sort_order ASC, updated_at DESC');
-  const dbProducts = await Promise.all(result.rows.map(row => wideProductFromRow(row as Record<string, unknown>)));
+  const rows = result.rows.map(row => row as Record<string, unknown>);
+  const imageIds = rows.map(row => String(row.id || row.slug || '').trim()).filter(Boolean);
+  const imagesMap = await getImagesMap(imageIds);
+  const dbProducts = rows.map(row => wideProductFromRow(row, imagesMap));
   const normalized = dbProducts.filter(Boolean);
 
-  if (!normalized.length) return includeInactive ? products : products.filter(product => product.active !== false);
   return includeInactive ? normalized : normalized.filter(product => product.active !== false);
 }
 

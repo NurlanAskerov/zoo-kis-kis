@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { products as fallbackProducts, type Product } from '@/lib/data';
+import { type Product } from '@/lib/data';
 
 type CatalogContextValue = {
   products: Product[];
@@ -17,20 +17,22 @@ function visibleProducts(items: Product[]) {
 }
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(visibleProducts(fallbackProducts));
-  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   async function refreshProducts() {
     setLoading(true);
     try {
       const response = await fetch('/api/products', { cache: 'no-store' });
-      if (!response.ok) return;
-      const data = await response.json() as { products?: Product[] };
-      if (Array.isArray(data.products) && data.products.length > 0) {
-        setProducts(visibleProducts(data.products));
+      if (!response.ok) {
+        setProducts([]);
+        return;
       }
+
+      const data = await response.json() as { products?: Product[] };
+      setProducts(Array.isArray(data.products) ? visibleProducts(data.products) : []);
     } catch {
-      setProducts(visibleProducts(fallbackProducts));
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -44,7 +46,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     products,
     loading,
     refreshProducts,
-    findProduct: (slug: string) => products.find(product => product.slug === slug) ?? fallbackProducts.find(product => product.slug === slug)
+    findProduct: (slug: string) => products.find(product => product.slug === slug)
   }), [products, loading]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;

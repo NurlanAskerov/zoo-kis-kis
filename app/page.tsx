@@ -12,8 +12,24 @@ import { useCatalog } from '@/components/CatalogProvider';
 
 function CollectionBlock({ title, collection }: { title: string; collection: ProductCollectionKey }) {
   const { t } = useLanguage();
-  const { products } = useCatalog();
+  const { products, loading } = useCatalog();
   const items = products.filter(product => product.collections.includes(collection));
+
+  if (loading) {
+    return (
+      <section className="section carousel-section compact-section">
+        <div className="container collection-head">
+          <div>
+            <p className="eyebrow">{title}</p>
+            <h2>{title}</h2>
+          </div>
+        </div>
+        <div className="container product-skeleton-row" aria-label="Məhsullar yüklənir">
+          {Array.from({ length: 4 }).map((_, index) => <div className="product-skeleton-card" key={index} />)}
+        </div>
+      </section>
+    );
+  }
 
   if (!items.length) return null;
 

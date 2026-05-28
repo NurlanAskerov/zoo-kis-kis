@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -11,6 +11,13 @@ import { CustomerProfileProvider } from '@/components/customer-profile';
 export const metadata: Metadata = {
   title: 'Zoo Kis-Kis | Zooshop & Grooming',
   description: 'Zoo Kis-Kis - sevimli dostlarınız üçün məhsullar, grooming və çatdırılma xidməti.'
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
