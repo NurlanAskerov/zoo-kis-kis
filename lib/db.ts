@@ -447,7 +447,7 @@ function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<st
 }
 
 export async function getProductsFromDb(includeInactive = false) {
-  if (!hasDatabaseConfig()) return includeInactive ? products : products.filter(product => product.active !== false);
+  if (!hasDatabaseConfig()) return [];
 
   const mode = await getProductSchemaMode();
 
@@ -478,8 +478,7 @@ export async function getProductBySlugFromDb(slug: string, includeInactive = tru
   if (!cleanSlug) return undefined;
 
   if (!hasDatabaseConfig()) {
-    const product = products.find(item => item.slug === cleanSlug);
-    return includeInactive ? product : (product?.active === false ? undefined : product);
+    return undefined;
   }
 
   const mode = await getProductSchemaMode();

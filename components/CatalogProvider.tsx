@@ -16,31 +16,42 @@ function visibleProducts(items: Product[]) {
   return items.filter(product => product.active !== false);
 }
 
-export function CatalogProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+export function CatalogProvider({
+  children,
+  initialProducts = []
+}: {
+  children: ReactNode;
+  initialProducts?: Product[];
+}) {
+  const initialVisible = useMemo(() => visibleProducts(initialProducts), [initialProducts]);
+  const [products, setProducts] = useState<Product[]>(initialVisible);
+  const [loading, setLoading] = useState(initialVisible.length === 0);
 
   async function refreshProducts() {
     setLoading(true);
     try {
       const response = await fetch('/api/products', { cache: 'no-store' });
       if (!response.ok) {
-        setProducts([]);
+        setProducts(current => current);
         return;
       }
 
       const data = await response.json() as { products?: Product[] };
-      setProducts(Array.isArray(data.products) ? visibleProducts(data.products) : []);
+      if (Array.isArray(data.products)) {
+        setProducts(visibleProducts(data.products));
+      }
     } catch {
-      setProducts([]);
+      setProducts(current => current);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    refreshProducts();
-  }, []);
+    if (!initialVisible.length) {
+      refreshProducts();
+    }
+  }, [initialVisible.length]);
 
   const value = useMemo(() => ({
     products,

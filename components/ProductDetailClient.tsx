@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, Heart, Share2, Truck } from 'lucide-react';
 import {
   getAudienceLabel,
@@ -41,51 +41,29 @@ function titleFromSlug(slug: string) {
   return decodeURIComponent(slug)
     .replace(/[-_]+/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, letter => letter.toLocaleUpperCase('az-AZ')) || 'Məhsul';
-}
-
-function createMinimalProduct(slug: string): Product {
-  const title = titleFromSlug(slug);
-  return {
-    id: slug,
-    slug,
-    name: { az: title, en: title, ru: title },
-    categoryKey: 'care',
-    typeKey: 'care',
-    audiences: ['allPets'],
-    collections: [],
-    price: 0,
-    image: '/products/cat-food.svg',
-    images: ['/products/cat-food.svg'],
-    stock: 'inStock',
-    active: true,
-    description: { az: '', en: '', ru: '' },
-    details: { az: [], en: [], ru: [] }
-  };
+    .trim() || 'Məhsul';
 }
 
 export function ProductDetailClient({ product: initialProduct, slug }: { product?: Product; slug: string }) {
   const { t, lang } = useLanguage();
-  const { findProduct, loading } = useCatalog();
+  const { findProduct, loading: catalogLoading } = useCatalog();
   const { profile } = useCustomerProfile();
   const { toggleFavorite, isFavorite } = useCart();
   const [remoteProduct, setRemoteProduct] = useState<Product | undefined>(initialProduct);
   const [remoteLoading, setRemoteLoading] = useState(!initialProduct);
+  const [remoteTried, setRemoteTried] = useState(Boolean(initialProduct));
 
-  const product = findProduct(slug) ?? remoteProduct;
-  const displayProduct = product ?? createMinimalProduct(slug);
-  const isMinimalFallback = !product;
-  const gallery = displayProduct.images?.length ? displayProduct.images : [displayProduct.image || '/products/cat-food.svg'];
-  const [selectedImage, setSelectedImage] = useState(gallery[0] ?? '');
+  const catalogProduct = findProduct(slug);
+  const product = catalogProduct ?? remoteProduct;
 
   useEffect(() => {
     setRemoteProduct(initialProduct);
     setRemoteLoading(!initialProduct);
+    setRemoteTried(Boolean(initialProduct));
   }, [initialProduct, slug]);
 
   useEffect(() => {
-    if (product || loading) return;
+    if (product || catalogLoading || remoteTried) return;
 
     let cancelled = false;
 
@@ -99,9 +77,12 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
           setRemoteProduct(data.product);
         }
       } catch {
-        // Səhifə boş qalmasın deyə minimal məlumat göstərilir.
+        // boş qalsın, fake məhsul göstərməyək
       } finally {
-        if (!cancelled) setRemoteLoading(false);
+        if (!cancelled) {
+          setRemoteLoading(false);
+          setRemoteTried(true);
+        }
       }
     }
 
@@ -110,20 +91,58 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
     return () => {
       cancelled = true;
     };
-  }, [product, loading, slug]);
+  }, [product, catalogLoading, remoteTried, slug]);
+
+  const gallery = product ? (product.images?.length ? product.images : [product.image || '/products/cat-food.svg']) : [];
+  const [selectedImage, setSelectedImage] = useState(gallery[0] ?? '');
 
   useEffect(() => {
-    const firstImage = gallery[0] || '/products/cat-food.svg';
-    if (!selectedImage || !gallery.includes(selectedImage)) setSelectedImage(firstImage);
+    const firstImage = gallery[0] || '';
+    if (firstImage && (!selectedImage || !gallery.includes(selectedImage))) setSelectedImage(firstImage);
   }, [gallery, selectedImage]);
 
-  const liked = isFavorite(displayProduct.slug);
-  const displayImage = selectedImage || displayProduct.image || '/products/cat-food.svg';
-  const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(displayProduct, lang, profile));
-  const productDetails = displayProduct.details?.[lang]?.length ? displayProduct.details[lang] : [];
-  const productAudiences: AudienceKey[] = displayProduct.audiences?.length ? displayProduct.audiences : ['allPets'];
-  const productTitle = displayProduct.name?.[lang] || displayProduct.name?.az || titleFromSlug(slug);
-  const productDescription = displayProduct.description?.[lang] || displayProduct.description?.az || '';
+  if (!product) {
+    const isStillLoading = catalogLoading || remoteLoading || !remoteTried;
+
+    return (
+      <main className="page section">
+        <div className="container">
+          <div className="breadcrumb">
+            <Link href="/">{t('home')}</Link> / <Link href="/products">{t('products')}</Link> / <span>{titleFromSlug(slug)}</span>
+          </div>
+
+          {isStillLoading ? (
+            <div className="detail detail-skeleton" aria-label="Məhsul yüklənir">
+              <div className="detail-media">
+                <div className="detail-main-image product-detail-skeleton-image" />
+              </div>
+              <div className="detail-content">
+                <div className="product-detail-skeleton-line short" />
+                <div className="product-detail-skeleton-title" />
+                <div className="product-detail-skeleton-line" />
+                <div className="product-detail-skeleton-line medium" />
+              </div>
+            </div>
+          ) : (
+            <div className="empty">
+              <p className="eyebrow">{t('products')}</p>
+              <h1>{titleFromSlug(slug)}</h1>
+              <p>Məhsul məlumatı tapılmadı və fake məhsul göstərilmir. Admin paneldə məhsulun aktiv olduğuna və slug dəyərinin düzgün olduğuna baxın.</p>
+              <Link href="/products" className="btn btn-primary">{t('backToProducts')}</Link>
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  const liked = isFavorite(product.slug);
+  const displayImage = selectedImage || product.image || '/products/cat-food.svg';
+  const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(product, lang, profile));
+  const productDetails = product.details?.[lang]?.length ? product.details[lang] : [];
+  const productAudiences: AudienceKey[] = product.audiences?.length ? product.audiences : ['allPets'];
+  const productTitle = product.name?.[lang] || product.name?.az || titleFromSlug(slug);
+  const productDescription = product.description?.[lang] || product.description?.az || '';
 
   return (
     <main className="page section">
@@ -131,14 +150,9 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
         <div className="breadcrumb">
           <Link href="/">{t('home')}</Link> / <Link href="/products">{t('products')}</Link> / <span>{productTitle}</span>
         </div>
-
-        {remoteLoading && !product ? (
-          <div className="detail-loading-note">Məhsul məlumatları yüklənir...</div>
-        ) : null}
-
         <div className="detail">
           <div className="detail-media">
-            {displayProduct.badge && <span className="product-badge detail-badge">{displayProduct.badge[lang]}</span>}
+            {product.badge && <span className="product-badge detail-badge">{product.badge[lang]}</span>}
             <div className="detail-main-image">
               <Image
                 src={displayImage}
@@ -146,6 +160,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
                 width={620}
                 height={620}
                 priority
+                quality={82}
                 sizes="(max-width: 768px) 94vw, 620px"
                 draggable={false}
                 unoptimized={displayImage.startsWith('data:')}
@@ -166,6 +181,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
                       alt={`${productTitle} ${index + 1}`}
                       width={88}
                       height={88}
+                      quality={68}
                       sizes="88px"
                       draggable={false}
                       unoptimized={image.startsWith('data:')}
@@ -176,20 +192,17 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
             )}
           </div>
           <div className="detail-content">
-            <p className="eyebrow">{getCategoryLabel(displayProduct.categoryKey, lang)}</p>
+            <p className="eyebrow">{getCategoryLabel(product.categoryKey, lang)}</p>
             <h1>{productTitle}</h1>
             {productDescription ? <p>{productDescription}</p> : null}
-            {isMinimalFallback ? (
-              <p className="microcopy">Bu məhsulun tam məlumatları hələ yüklənməyib. Ad və link saxlanıldı, database cavabı gələndə məlumatlar avtomatik tamamlanacaq.</p>
-            ) : null}
             <div className="product-tags detail-tags">
               {productAudiences.map(audience => <span key={audience}>{getAudienceLabel(audience, lang)}</span>)}
-              <span>{getProductTypeLabel(displayProduct.typeKey, lang)}</span>
-              <span>{stockLabels[displayProduct.stock]?.[lang] ?? stockLabels.inStock[lang]}</span>
+              <span>{getProductTypeLabel(product.typeKey, lang)}</span>
+              <span>{stockLabels[product.stock]?.[lang] ?? stockLabels.inStock[lang]}</span>
             </div>
             <div className="detail-price">
-              <span className="price">{displayProduct.price || 0} AZN</span>
-              {displayProduct.oldPrice && <span className="old-price">{displayProduct.oldPrice} AZN</span>}
+              <span className="price">{product.price || 0} AZN</span>
+              {product.oldPrice && <span className="old-price">{product.oldPrice} AZN</span>}
             </div>
             {productDetails.length ? (
               <div className="list">
@@ -197,19 +210,17 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
               </div>
             ) : null}
             <div className="detail-actions hero-cta">
-              {!isMinimalFallback ? <AddToCartButton slug={displayProduct.slug} /> : null}
+              <AddToCartButton slug={product.slug} />
               <a className="btn btn-soft" href={whatsappUrl} target="_blank" rel="noreferrer"><Truck size={17} /> {t('shareOnWhatsapp')}</a>
-              <button className="btn btn-soft" type="button" onClick={() => shareProductDetail(displayProduct, lang)}><Share2 size={17} /> {t('shareProduct')}</button>
-              {!isMinimalFallback ? (
-                <button className={liked ? 'btn btn-red favorite-action-active' : 'btn btn-red'} onClick={() => toggleFavorite(displayProduct.slug)} type="button">
-                  <Heart size={17} fill={liked ? 'currentColor' : 'none'} /> {t('favorites')}
-                </button>
-              ) : null}
+              <button className="btn btn-soft" type="button" onClick={() => shareProductDetail(product, lang)}><Share2 size={17} /> {t('shareProduct')}</button>
+              <button className={liked ? 'btn btn-red favorite-action-active' : 'btn btn-red'} onClick={() => toggleFavorite(product.slug)} type="button">
+                <Heart size={17} fill={liked ? 'currentColor' : 'none'} /> {t('favorites')}
+              </button>
             </div>
             <Link className="details-link" href="/products">← {t('backToProducts')}</Link>
           </div>
         </div>
-        {!isMinimalFallback ? <ProductRecommendations product={displayProduct} /> : null}
+        <ProductRecommendations product={product} />
       </div>
     </main>
   );

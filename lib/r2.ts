@@ -112,7 +112,7 @@ export async function uploadImageBufferToR2({
       Key: key,
       Body: buffer,
       ContentType: contentType || 'image/jpeg',
-      CacheControl: 'public, max-age=31536000, immutable'
+      CacheControl: 'public, max-age=31536000, s-maxage=31536000, immutable'
     }));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'R2 upload xətası';

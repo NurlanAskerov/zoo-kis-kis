@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { products as fallbackProducts } from '@/lib/data';
 import { getProductBySlugFromDb } from '@/lib/db';
 import { ProductDetailClient } from '@/components/ProductDetailClient';
@@ -9,16 +10,22 @@ export function generateStaticParams() {
   return fallbackProducts.map(product => ({ slug: product.slug }));
 }
 
+const getCachedProductBySlug = unstable_cache(
+  async (slug: string) => getProductBySlugFromDb(slug, true),
+  ['zoo-kis-kis-product-detail'],
+  { revalidate: 60 }
+);
+
 type ProductDetailParams = {
   params: { slug: string } | Promise<{ slug: string }>;
 };
 
 export default async function ProductDetailPage({ params }: ProductDetailParams) {
   const { slug } = await Promise.resolve(params);
-  let product = fallbackProducts.find(item => item.slug === slug);
+  let product;
 
   try {
-    product = await getProductBySlugFromDb(slug, true) ?? product;
+    product = await getCachedProductBySlug(slug);
   } catch (error) {
     console.error('/products/[slug] product load error', error);
   }

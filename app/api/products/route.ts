@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isAdminRequest } from '@/lib/admin-auth';
-import { products as fallbackProducts } from '@/lib/data';
 import { getProductsFromDb, hasDatabaseConfig, normalizeProduct, upsertProduct } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
@@ -10,11 +9,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, databaseReady: hasDatabaseConfig(), products });
   } catch (error) {
     console.error('/api/products error', error);
-    const products = includeInactive ? fallbackProducts : fallbackProducts.filter(product => product.active !== false);
     return NextResponse.json({
       ok: false,
       databaseReady: hasDatabaseConfig(),
-      products,
+      products: [],
       message: error instanceof Error ? error.message : 'Products could not be loaded from database.'
     });
   }

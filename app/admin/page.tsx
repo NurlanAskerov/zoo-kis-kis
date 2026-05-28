@@ -218,6 +218,62 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
   return new Promise<Blob | null>(resolve => canvas.toBlob(resolve, type, quality));
 }
 
+function createResizedCanvas(source: HTMLImageElement, maxWidth: number, maxHeight: number) {
+  const ratio = Math.min(1, maxWidth / source.width, maxHeight / source.height);
+  const width = Math.max(1, Math.round(source.width * ratio));
+  const height = Math.max(1, Math.round(source.height * ratio));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Browser şəkli optimizasiya edə bilmədi.');
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(source, 0, 0, width, height);
+
+  return canvas;
+}
+
+async function bestCompressedImage(source: HTMLImageElement) {
+  const variants = [
+    { maxWidth: 1400, maxHeight: 1400, quality: 0.84, target: 650 * 1024 },
+    { maxWidth: 1400, maxHeight: 1400, quality: 0.78, target: 650 * 1024 },
+    { maxWidth: 1280, maxHeight: 1280, quality: 0.78, target: 520 * 1024 },
+    { maxWidth: 1200, maxHeight: 1200, quality: 0.74, target: 460 * 1024 }
+  ];
+
+  let bestBlob: Blob | null = null;
+  let bestExtension = 'webp';
+  let bestType = 'image/webp';
+
+  for (const variant of variants) {
+    const canvas = createResizedCanvas(source, variant.maxWidth, variant.maxHeight);
+    const blob = await canvasToBlob(canvas, 'image/webp', variant.quality);
+
+    if (!blob) continue;
+
+    bestBlob = blob;
+    bestExtension = 'webp';
+    bestType = 'image/webp';
+
+    if (blob.size <= variant.target) {
+      return { blob, extension: bestExtension, type: bestType };
+    }
+  }
+
+  if (bestBlob) {
+    return { blob: bestBlob, extension: bestExtension, type: bestType };
+  }
+
+  const fallbackCanvas = createResizedCanvas(source, 1280, 1280);
+  const fallbackBlob = await canvasToBlob(fallbackCanvas, 'image/jpeg', 0.82);
+
+  if (!fallbackBlob) throw new Error('Şəkil optimizasiya olunmadı. Başqa format seçin.');
+
+  return { blob: fallbackBlob, extension: 'jpg', type: 'image/jpeg' };
+}
+
 async function optimizeImageForUpload(file: File) {
   if (/heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name)) {
     throw new Error('HEIC/Live Photo formatı dəstəklənmir. Şəkli iPhone-da JPG kimi export edib yenidən seçin.');
@@ -228,30 +284,7 @@ async function optimizeImageForUpload(file: File) {
   }
 
   const source = await imageFromFile(file);
-  const maxWidth = 1600;
-  const maxHeight = 2000;
-  const ratio = Math.min(1, maxWidth / source.width, maxHeight / source.height);
-  const width = Math.max(1, Math.round(source.width * ratio));
-  const height = Math.max(1, Math.round(source.height * ratio));
-
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Browser şəkli optimizasiya edə bilmədi.');
-  context.drawImage(source, 0, 0, width, height);
-
-  let blob = await canvasToBlob(canvas, 'image/webp', 0.82);
-  let type = 'image/webp';
-  let extension = 'webp';
-
-  if (!blob) {
-    blob = await canvasToBlob(canvas, 'image/jpeg', 0.82);
-    type = 'image/jpeg';
-    extension = 'jpg';
-  }
-
-  if (!blob) throw new Error('Şəkil optimizasiya olunmadı. Başqa format seçin.');
+  const { blob, extension, type } = await bestCompressedImage(source);
 
   const safeBase = file.name
     .replace(/\.[^/.]+$/, '')
@@ -586,7 +619,7 @@ export default function AdminPage() {
                   <label className="file-upload-box add-image-box">
                     {uploadingImages ? <Loader2 size={22} className="spin" /> : <ImagePlus size={22} />}
                     <span>+ Şəkil əlavə et</span>
-                    <small>Şəkil seçilən kimi preview görünür. Böyük şəkillər browser-də kiçildilir və upload arxa fonda R2-yə gedir.</small>
+                    <small>Şəkil seçilən kimi preview görünür. Böyük şəkillər keyfiyyəti qorunaraq WebP-ə çevrilir, ölçüsü azaldılır və upload arxa fonda R2-yə gedir.</small>
                     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" multiple onChange={handleImages} />
                   </label>
 
