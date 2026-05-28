@@ -57,8 +57,9 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   }
 
   const liked = isFavorite(product.slug);
-  const displayImage = selectedImage || product.image;
+  const displayImage = selectedImage || product.image || '/products/cat-food.svg';
   const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(product, lang, profile));
+  const productDetails = product.details?.[lang]?.length ? product.details[lang] : [];
 
   return (
     <main className="page section">
@@ -118,9 +119,11 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
               <span className="price">{product.price} AZN</span>
               {product.oldPrice && <span className="old-price">{product.oldPrice} AZN</span>}
             </div>
-            <div className="list">
-              {product.details[lang].map(item => <span className="list-item" key={item}><CheckCircle2 size={18} /> {item}</span>)}
-            </div>
+            {productDetails.length ? (
+              <div className="list">
+                {productDetails.map(item => <span className="list-item" key={item}><CheckCircle2 size={18} /> {item}</span>)}
+              </div>
+            ) : null}
             <div className="detail-actions hero-cta">
               <AddToCartButton slug={product.slug} />
               <a className="btn btn-soft" href={whatsappUrl} target="_blank" rel="noreferrer"><Truck size={17} /> {t('shareOnWhatsapp')}</a>
