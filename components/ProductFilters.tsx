@@ -63,14 +63,18 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
 
   const filtered = useMemo(() => products.filter(product => {
     const query = search.trim().toLocaleLowerCase('az-AZ');
-    const name = product.name[lang].toLocaleLowerCase('az-AZ');
-    const azName = product.name.az.toLocaleLowerCase('az-AZ');
-    const description = product.description[lang].toLocaleLowerCase('az-AZ');
+    const name = (product.name?.[lang] || product.name?.az || '').toLocaleLowerCase('az-AZ');
+    const azName = (product.name?.az || '').toLocaleLowerCase('az-AZ');
+    const description = (product.description?.[lang] || product.description?.az || '').toLocaleLowerCase('az-AZ');
+    const audiences = product.audiences?.length ? product.audiences : ['allPets'];
+    const collections = product.collections ?? [];
+
     const bySearch = !query || name.includes(query) || azName.includes(query) || description.includes(query);
-    const byAudience = audience === 'all' || product.audiences.includes(audience);
+    const byAudience = audience === 'all' || audiences.includes(audience) || audiences.includes('allPets');
     const byDepartment = department === 'all' || getDepartmentForProductType(product.typeKey) === department;
     const bySubcategory = subcategory === 'all' || product.typeKey === subcategory;
-    const byCollection = collection === 'all' || product.collections.includes(collection);
+    const byCollection = collection === 'all' || collections.includes(collection);
+
     return bySearch && byAudience && byDepartment && bySubcategory && byCollection;
   }), [products, audience, department, subcategory, collection, search, lang]);
 

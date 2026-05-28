@@ -28,12 +28,12 @@ async function shareProduct(product: Product, lang: 'az' | 'en' | 'ru') {
 export function ProductCard({ product }: { product: Product }) {
   const { t, lang } = useLanguage();
   const { toggleFavorite, isFavorite } = useCart();
-  const primaryAudience = product.audiences[0];
+  const primaryAudience = product.audiences?.[0] ?? 'allPets';
   const department = getDepartmentForProductType(product.typeKey);
-  const images = product.images?.length ? product.images : [product.image];
+  const images = product.images?.length ? product.images : [product.image || '/products/cat-food.svg'];
   const hoverImage = images[1];
   const liked = isFavorite(product.slug);
-  const mainIsData = images[0].startsWith('data:');
+  const mainIsData = images[0]?.startsWith('data:') ?? false;
   const hoverIsData = Boolean(hoverImage?.startsWith('data:'));
 
   return (

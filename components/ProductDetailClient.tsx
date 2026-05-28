@@ -60,12 +60,14 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   const displayImage = selectedImage || product.image || '/products/cat-food.svg';
   const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(product, lang, profile));
   const productDetails = product.details?.[lang]?.length ? product.details[lang] : [];
+  const productTitle = product.name?.[lang] || product.name?.az || 'Məhsul';
+  const productDescription = product.description?.[lang] || product.description?.az || '';
 
   return (
     <main className="page section">
       <div className="container">
         <div className="breadcrumb">
-          <Link href="/">{t('home')}</Link> / <Link href="/products">{t('products')}</Link> / <span>{product.name[lang]}</span>
+          <Link href="/">{t('home')}</Link> / <Link href="/products">{t('products')}</Link> / <span>{productTitle}</span>
         </div>
         <div className="detail">
           <div className="detail-media">
@@ -73,7 +75,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
             <div className="detail-main-image">
               <Image
                 src={displayImage}
-                alt={product.name[lang]}
+                alt={productTitle}
                 width={620}
                 height={620}
                 priority
@@ -94,7 +96,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
                   >
                     <Image
                       src={image}
-                      alt={`${product.name[lang]} ${index + 1}`}
+                      alt={`${productTitle} ${index + 1}`}
                       width={88}
                       height={88}
                       sizes="88px"
@@ -108,8 +110,8 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
           </div>
           <div className="detail-content">
             <p className="eyebrow">{getCategoryLabel(product.categoryKey, lang)}</p>
-            <h1>{product.name[lang]}</h1>
-            <p>{product.description[lang]}</p>
+            <h1>{productTitle}</h1>
+            {productDescription ? <p>{productDescription}</p> : null}
             <div className="product-tags detail-tags">
               {product.audiences.map(audience => <span key={audience}>{getAudienceLabel(audience, lang)}</span>)}
               <span>{getProductTypeLabel(product.typeKey, lang)}</span>
