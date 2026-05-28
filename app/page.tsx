@@ -54,7 +54,7 @@ export default function HomePage() {
           <div className="hero-visual hero-pets-visual">
             <div className="hero-pets-frame">
               <Image
-                src="/hero-pets.webp"
+                src="/hero-pets.png"
                 alt="Pişik və it ilə Zoo Kis-Kis pet shop hero şəkli"
                 fill
                 priority

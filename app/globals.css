@@ -2867,3 +2867,44 @@ body:has(.modal-backdrop) .header {
     justify-content: flex-start;
   }
 }
+
+
+/* v30: mobile hero image above text */
+@media (max-width: 620px) {
+  .hero-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-pets-visual,
+  .hero-catalog-visual,
+  .hero-store-visual,
+  .hero-visual {
+    order: 1;
+  }
+
+  .hero-copy {
+    order: 2;
+    padding: 18px 20px 28px;
+  }
+
+  .hero-pets-visual {
+    padding: 18px 14px 8px;
+  }
+
+  .hero-pets-frame {
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    aspect-ratio: 1.25 / 1;
+    border-radius: 24px;
+  }
+
+  .hero-pets-image {
+    object-fit: contain;
+  }
+
+  .hero-copy .eyebrow {
+    margin-top: 4px;
+  }
+}
