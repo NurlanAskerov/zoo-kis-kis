@@ -9,6 +9,7 @@ import {
   getCategoryLabel,
   getProductTypeLabel,
   stockLabels,
+  type AudienceKey,
   type Product
 } from '@/lib/data';
 import { useCatalog } from './CatalogProvider';
@@ -120,6 +121,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   const displayImage = selectedImage || displayProduct.image || '/products/cat-food.svg';
   const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(displayProduct, lang, profile));
   const productDetails = displayProduct.details?.[lang]?.length ? displayProduct.details[lang] : [];
+  const productAudiences: AudienceKey[] = displayProduct.audiences?.length ? displayProduct.audiences : ['allPets'];
   const productTitle = displayProduct.name?.[lang] || displayProduct.name?.az || titleFromSlug(slug);
   const productDescription = displayProduct.description?.[lang] || displayProduct.description?.az || '';
 
@@ -181,7 +183,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
               <p className="microcopy">Bu məhsulun tam məlumatları hələ yüklənməyib. Ad və link saxlanıldı, database cavabı gələndə məlumatlar avtomatik tamamlanacaq.</p>
             ) : null}
             <div className="product-tags detail-tags">
-              {(displayProduct.audiences?.length ? displayProduct.audiences : ['allPets']).map(audience => <span key={audience}>{getAudienceLabel(audience, lang)}</span>)}
+              {productAudiences.map(audience => <span key={audience}>{getAudienceLabel(audience, lang)}</span>)}
               <span>{getProductTypeLabel(displayProduct.typeKey, lang)}</span>
               <span>{stockLabels[displayProduct.stock]?.[lang] ?? stockLabels.inStock[lang]}</span>
             </div>
