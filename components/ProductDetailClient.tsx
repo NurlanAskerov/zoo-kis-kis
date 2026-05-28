@@ -70,7 +70,16 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
           <div className="detail-media">
             {product.badge && <span className="product-badge detail-badge">{product.badge[lang]}</span>}
             <div className="detail-main-image">
-              <Image src={displayImage} alt={product.name[lang]} width={620} height={620} priority unoptimized={displayImage.startsWith('http') || displayImage.startsWith('data:')} />
+              <Image
+                src={displayImage}
+                alt={product.name[lang]}
+                width={620}
+                height={620}
+                priority
+                sizes="(max-width: 768px) 94vw, 620px"
+                draggable={false}
+                unoptimized={displayImage.startsWith('data:')}
+              />
             </div>
             {gallery.length > 1 && (
               <div className="detail-thumbs" aria-label={t('otherImages')}>
@@ -82,7 +91,15 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
                     onClick={() => setSelectedImage(image)}
                     aria-label={`${t('otherImages')} ${index + 1}`}
                   >
-                    <Image src={image} alt={`${product.name[lang]} ${index + 1}`} width={88} height={88} unoptimized={image.startsWith('http') || image.startsWith('data:')} />
+                    <Image
+                      src={image}
+                      alt={`${product.name[lang]} ${index + 1}`}
+                      width={88}
+                      height={88}
+                      sizes="88px"
+                      draggable={false}
+                      unoptimized={image.startsWith('data:')}
+                    />
                   </button>
                 ))}
               </div>

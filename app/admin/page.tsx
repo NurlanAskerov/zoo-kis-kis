@@ -49,6 +49,7 @@ type ProductForm = {
 };
 
 type ImageUploadStatus = 'preparing' | 'uploading' | 'uploaded' | 'failed';
+type AdminTab = 'active' | 'add' | 'inactive';
 
 type ImageSlot = {
   id: string;
@@ -280,9 +281,11 @@ export default function AdminPage() {
   const [message, setMessage] = useState('');
   const [form, setForm] = useState<ProductForm>(initialForm);
   const [imageSlots, setImageSlots] = useState<ImageSlot[]>(() => initialForm.imagesText.split('\n').filter(Boolean).map((url, index) => ({ id: `initial-${index}`, name: `Şəkil ${index + 1}`, previewUrl: url, url, status: 'uploaded' as ImageUploadStatus })));
-  const [orders, setOrders] = useState<Array<Record<string, string | number | null>>>([]);
+  const [adminTab, setAdminTab] = useState<AdminTab>('active');
   const selectedDepartment = getDepartmentForProductType(form.typeKey);
   const adminSubcategoryOptions = getSubcategoryOptionsForDepartment(selectedDepartment);
+  const activeProducts = useMemo(() => adminProducts.filter(product => product.active !== false), [adminProducts]);
+  const inactiveProducts = useMemo(() => adminProducts.filter(product => product.active === false), [adminProducts]);
 
   function changeDepartment(department: ProductDepartmentKey) {
     const firstSubcategory = getSubcategoryOptionsForDepartment(department)[0]?.key ?? 'dryFood';
@@ -303,16 +306,9 @@ export default function AdminPage() {
       setLoggedIn(true);
       await refreshProducts();
       await loadAdminProducts();
-      await loadOrders();
     }
   }
 
-  async function loadOrders() {
-    const response = await fetch('/api/admin/orders', { cache: 'no-store' }).catch(() => null);
-    if (!response?.ok) return;
-    const data = await response.json().catch(() => ({ orders: [] }));
-    setOrders(Array.isArray(data.orders) ? data.orders : []);
-  }
 
   async function loadAdminProducts() {
     const response = await fetch('/api/products?includeInactive=1', { cache: 'no-store' }).catch(() => null);
@@ -341,7 +337,7 @@ export default function AdminPage() {
     setPassword('');
     await refreshProducts();
     await loadAdminProducts();
-    await loadOrders();
+    setAdminTab('active');
   }
 
   async function logout() {
@@ -474,6 +470,34 @@ export default function AdminPage() {
     }
   }
 
+
+  function renderProductList(list: Product[], emptyText: string) {
+    return list.length ? (
+      <div className="admin-product-cards">
+        {list.map(product => (
+          <div className="admin-product-card" key={product.slug}>
+            <div className="admin-product-mini">
+              <img src={(product.images?.[0] || product.image)} alt={product.name[lang]} draggable={false} />
+              <div>
+                <strong>{product.name[lang]}</strong>
+                <span>{getDepartmentLabel(getDepartmentForProductType(product.typeKey), lang)} · {getProductTypeLabel(product.typeKey, lang)}</span>
+                <small>{stockLabels[product.stock][lang]} · {product.price} AZN</small>
+              </div>
+            </div>
+            <button className={`switch ${product.active === false ? '' : 'on'}`} type="button" onClick={() => toggleActive(product)} aria-label="active toggle">
+              <span />
+            </button>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="admin-empty-state">
+        <p>{emptyText}</p>
+        <button className="btn btn-primary" type="button" onClick={() => setAdminTab('add')}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
+      </div>
+    );
+  }
+
   if (!loggedIn) {
     return (
       <main className="page section page-spaced">
@@ -504,48 +528,43 @@ export default function AdminPage() {
           <button className="btn btn-soft" type="button" onClick={logout}><LogOut size={17} /> {t('logout')}</button>
         </div>
 
-        <div className="admin-grid enhanced-admin-grid">
-          <aside className="sidebar">
-            <a href="#products">{t('products')}</a>
-            <a href="#add">{t('addProduct')}</a>
-            <a href="#orders">{t('orders')}</a>
-            <a href="#preview">{t('productPreview')}</a>
-          </aside>
+        <div className="admin-dashboard">
+          <div className="admin-summary-grid">
+            <button className={adminTab === 'active' ? 'admin-summary-card active' : 'admin-summary-card'} type="button" onClick={() => setAdminTab('active')}>
+              <span>Aktiv məhsullar</span>
+              <strong>{activeProducts.length}</strong>
+            </button>
+            <button className={adminTab === 'add' ? 'admin-summary-card active' : 'admin-summary-card'} type="button" onClick={() => setAdminTab('add')}>
+              <span>Yeni məhsul</span>
+              <strong>+</strong>
+            </button>
+            <button className={adminTab === 'inactive' ? 'admin-summary-card active' : 'admin-summary-card'} type="button" onClick={() => setAdminTab('inactive')}>
+              <span>Passiv məhsullar</span>
+              <strong>{inactiveProducts.length}</strong>
+            </button>
+          </div>
 
-          <div className="admin-main-stack">
-            <section id="products" className="info-card">
-              <p className="eyebrow">{t('products')}</p>
-              <h2>{t('productList')}</h2>
-              <div className="table-scroll">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>{t('name')}</th>
-                      <th>{t('department')}</th>
-                      <th>{t('price')}</th>
-                      <th>{t('stock')}</th>
-                      <th>{t('status')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {adminProducts.map(product => (
-                      <tr key={product.slug}>
-                        <td>{product.name[lang]}</td>
-                        <td>{getDepartmentLabel(getDepartmentForProductType(product.typeKey), lang)} · {getProductTypeLabel(product.typeKey, lang)}</td>
-                        <td>{product.price} AZN</td>
-                        <td>{stockLabels[product.stock][lang]}</td>
-                        <td>
-                          <button className={`switch ${product.active === false ? '' : 'on'}`} type="button" onClick={() => toggleActive(product)} aria-label="active toggle">
-                            <span />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="admin-tabbar" role="tablist" aria-label="Admin panel tabs">
+            <button className={adminTab === 'active' ? 'active' : ''} type="button" onClick={() => setAdminTab('active')}>Aktiv məhsullar</button>
+            <button className={adminTab === 'add' ? 'active' : ''} type="button" onClick={() => setAdminTab('add')}>+ Yeni məhsul əlavə et</button>
+            <button className={adminTab === 'inactive' ? 'active' : ''} type="button" onClick={() => setAdminTab('inactive')}>Passiv məhsullar</button>
+          </div>
+
+          {adminTab === 'active' ? (
+            <section id="products" className="info-card admin-products-panel">
+              <div className="admin-panel-head">
+                <div>
+                  <p className="eyebrow">{t('products')}</p>
+                  <h2>Aktiv məhsullar</h2>
+                  <p className="microcopy">Saytda görünən məhsullar. Məhsulu gizlətmək üçün toggle-i söndür.</p>
+                </div>
+                <button className="btn btn-primary" type="button" onClick={() => setAdminTab('add')}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
               </div>
+              {renderProductList(activeProducts, 'Aktiv məhsul yoxdur. İlk məhsulu əlavə edin.')}
             </section>
+          ) : null}
 
+          {adminTab === 'add' ? (
             <section id="add" className="info-card admin-editor-card">
               <div>
                 <p className="eyebrow">{t('addProduct')}</p>
@@ -661,26 +680,21 @@ export default function AdminPage() {
                 </aside>
               </div>
             </section>
+          ) : null}
 
-            <section id="orders" className="info-card">
-              <p className="eyebrow">{t('orders')}</p>
-              <h2>{t('lastOrders')}</h2>
-              <p className="microcopy">Sifariş WhatsApp-a göndəriləndə backend qoşuludursa burada da görünür. Backend qoşulmayıbsa müştəri yenə WhatsApp-a yönləndirilir.</p>
-              {orders.length ? (
-                <div className="admin-product-list">
-                  {orders.map(order => (
-                    <div className="admin-product-row" key={String(order.id)}>
-                      <div>
-                        <strong>{String(order.customer_name || t('customer'))}</strong>
-                        <span>{String(order.customer_phone || '-')} · {String(order.customer_address || '-')} · {String(order.total || 0)} AZN</span>
-                      </div>
-                      <span className="status-pill">{String(order.status || t('pending'))}</span>
-                    </div>
-                  ))}
+          {adminTab === 'inactive' ? (
+            <section id="inactive-products" className="info-card admin-products-panel">
+              <div className="admin-panel-head">
+                <div>
+                  <p className="eyebrow">Passiv</p>
+                  <h2>Passiv məhsullar</h2>
+                  <p className="microcopy">Bu məhsullar saytda görünmür. Toggle-i yandıranda yenidən aktiv olur.</p>
                 </div>
-              ) : <p>Hələ sifariş yoxdur və ya database qoşulmayıb.</p>}
+                <button className="btn btn-primary" type="button" onClick={() => setAdminTab('add')}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
+              </div>
+              {renderProductList(inactiveProducts, 'Passiv məhsul yoxdur.')}
             </section>
-          </div>
+          ) : null}
         </div>
       </div>
     </main>

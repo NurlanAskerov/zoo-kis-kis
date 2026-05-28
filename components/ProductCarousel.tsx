@@ -1,36 +1,50 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type Product } from '@/lib/data';
 import { ProductCard } from './ProductCard';
 
 export function ProductCarousel({ items }: { items: Product[] }) {
   const marqueeRef = useRef<HTMLDivElement | null>(null);
   const source = items.length > 0 ? items : [];
-  const loop = useMemo(() => [...source, ...source, ...source, ...source], [source]);
+  const loop = useMemo(() => source, [source]);
+
+  function scrollOne(direction: 'left' | 'right') {
+    const marquee = marqueeRef.current;
+    if (!marquee) return;
+
+    const firstCard = marquee.querySelector<HTMLElement>('.marquee-card');
+    const gap = window.matchMedia('(max-width: 768px)').matches ? 14 : 20;
+    const step = (firstCard?.offsetWidth ?? Math.round(window.innerWidth * 0.78)) + gap;
+    const nextLeft = direction === 'right' ? marquee.scrollLeft + step : marquee.scrollLeft - step;
+
+    marquee.scrollTo({
+      left: Math.max(0, nextLeft),
+      behavior: 'smooth'
+    });
+  }
 
   useEffect(() => {
     const marquee = marqueeRef.current;
-    if (!marquee || source.length === 0) return;
+    if (!marquee || source.length < 2) return;
 
-    const media = window.matchMedia('(max-width: 768px)');
     let timer: number | null = null;
 
-    const startMobileSlider = () => {
+    const startSlider = () => {
       if (timer !== null) {
         window.clearInterval(timer);
         timer = null;
       }
 
-      if (!media.matches) return;
-
       timer = window.setInterval(() => {
         const firstCard = marquee.querySelector<HTMLElement>('.marquee-card');
-        const step = (firstCard?.offsetWidth ?? Math.round(window.innerWidth * 0.78)) + 14;
-        const resetPoint = marquee.scrollWidth / 2;
+        const gap = window.matchMedia('(max-width: 768px)').matches ? 14 : 20;
+        const step = (firstCard?.offsetWidth ?? Math.round(window.innerWidth * 0.78)) + gap;
+        const nearEnd = marquee.scrollLeft + marquee.clientWidth + step >= marquee.scrollWidth - 8;
 
-        if (marquee.scrollLeft + marquee.clientWidth + step >= resetPoint) {
-          marquee.scrollTo({ left: 0, behavior: 'auto' });
+        if (nearEnd) {
+          marquee.scrollTo({ left: 0, behavior: 'smooth' });
           return;
         }
 
@@ -38,28 +52,41 @@ export function ProductCarousel({ items }: { items: Product[] }) {
       }, 5600);
     };
 
-    startMobileSlider();
-    media.addEventListener('change', startMobileSlider);
+    startSlider();
 
     return () => {
       if (timer !== null) {
         window.clearInterval(timer);
         timer = null;
       }
-
-      media.removeEventListener('change', startMobileSlider);
     };
   }, [source.length]);
 
+  if (!source.length) return null;
+
   return (
-    <div className="marquee" aria-label="Product carousel" ref={marqueeRef}>
-      <div className="marquee-track">
-        {loop.map((product, index) => (
-          <div className="marquee-card" key={`${product.slug}-${index}`}>
-            <ProductCard product={product} />
-          </div>
-        ))}
+    <div className="carousel-shell">
+      {source.length > 1 ? (
+        <button className="carousel-arrow carousel-arrow-left" type="button" aria-label="Əvvəlki məhsullar" onClick={() => scrollOne('left')}>
+          <ChevronLeft size={20} />
+        </button>
+      ) : null}
+
+      <div className="marquee" aria-label="Product carousel" ref={marqueeRef}>
+        <div className="marquee-track">
+          {loop.map((product, index) => (
+            <div className="marquee-card" key={`${product.slug}-${index}`}>
+              <ProductCard product={product} />
+            </div>
+          ))}
+        </div>
       </div>
+
+      {source.length > 1 ? (
+        <button className="carousel-arrow carousel-arrow-right" type="button" aria-label="Növbəti məhsullar" onClick={() => scrollOne('right')}>
+          <ChevronRight size={20} />
+        </button>
+      ) : null}
     </div>
   );
 }

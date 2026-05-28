@@ -33,6 +33,8 @@ export function ProductCard({ product }: { product: Product }) {
   const images = product.images?.length ? product.images : [product.image];
   const hoverImage = images[1];
   const liked = isFavorite(product.slug);
+  const mainIsData = images[0].startsWith('data:');
+  const hoverIsData = Boolean(hoverImage?.startsWith('data:'));
 
   return (
     <article className="product-card">
@@ -50,18 +52,24 @@ export function ProductCard({ product }: { product: Product }) {
           className={`product-img product-img-primary ${hoverImage ? 'has-hover' : ''}`}
           src={images[0]}
           alt={product.name[lang]}
-          unoptimized={images[0].startsWith('http') || images[0].startsWith('data:')}
+          unoptimized={mainIsData}
           width={320}
           height={320}
+          sizes="(max-width: 620px) 82vw, (max-width: 980px) 42vw, 260px"
+          draggable={false}
+          loading="lazy"
         />
         {hoverImage && (
           <Image
             className="product-img product-img-hover"
             src={hoverImage}
             alt={product.name[lang]}
-            unoptimized={hoverImage.startsWith('http') || hoverImage.startsWith('data:')}
+            unoptimized={hoverIsData}
             width={320}
             height={320}
+            sizes="(max-width: 620px) 82vw, (max-width: 980px) 42vw, 260px"
+            draggable={false}
+            loading="lazy"
           />
         )}
       </Link>
