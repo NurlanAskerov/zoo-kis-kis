@@ -3099,6 +3099,42 @@ body:has(.modal-backdrop) .header {
   margin-bottom: 16px;
 }
 
+.admin-editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.admin-search-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(84, 169, 56, .07);
+}
+
+.admin-search-row svg {
+  color: var(--green-deep);
+}
+
+.admin-search-row .input {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 10px 4px;
+}
+
+.admin-search-row .input:focus {
+  box-shadow: none;
+}
+
 .admin-product-cards {
   display: grid;
   gap: 12px;
@@ -3113,6 +3149,23 @@ body:has(.modal-backdrop) .header {
   border: 1px solid var(--line);
   border-radius: 20px;
   background: #fffdf0;
+}
+
+.admin-product-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.admin-edit-btn {
+  min-height: 40px;
+  padding-inline: 13px;
+}
+
+.switch.pending {
+  opacity: .65;
+  cursor: progress;
 }
 
 .admin-product-mini {
@@ -3222,7 +3275,16 @@ body:has(.modal-backdrop) .header {
     flex-direction: column;
   }
 
+  .admin-editor-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .admin-panel-head .btn {
+    width: 100%;
+  }
+
+  .admin-editor-head .btn {
     width: 100%;
   }
 
@@ -3298,6 +3360,21 @@ body:has(.modal-backdrop) .header {
 
   .admin-product-card .switch {
     justify-self: start;
+  }
+
+  .admin-product-row-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-search-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .admin-search-row .tiny-btn {
+    grid-column: 1 / -1;
+    justify-content: center;
+    width: 100%;
   }
 
   .admin-product-mini img {
@@ -3830,4 +3907,45 @@ textarea,
     line-height: 58px !important;
     border-radius: 20px !important;
   }
+}
+
+/* v36: product-card white media layer, badge always above hover image, smoother admin list controls */
+.product-card {
+  background: #fff;
+  isolation: isolate;
+}
+
+.product-media {
+  background: #fff;
+  isolation: isolate;
+}
+
+.product-img-primary {
+  position: relative;
+  z-index: 1;
+}
+
+.product-img-hover {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.product-badge {
+  z-index: 6;
+  pointer-events: none;
+  box-shadow: 0 10px 22px rgba(201, 60, 43, .12);
+}
+
+.product-card:hover .product-img-primary:not(.has-hover) {
+  transform: scale(1.07);
+}
+
+.product-card:hover .product-img-hover,
+.product-media:hover .product-img-hover {
+  transform: scale(1.07);
+}
+
+.product-media:hover .product-img-primary.has-hover {
+  opacity: 0;
+  transform: scale(1.03);
 }

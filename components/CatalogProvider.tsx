@@ -28,7 +28,7 @@ export function CatalogProvider({
   const [loading, setLoading] = useState(initialVisible.length === 0);
 
   async function refreshProducts() {
-    setLoading(true);
+    if (!products.length) setLoading(true);
     try {
       const response = await fetch('/api/products', { cache: 'no-store' });
       if (!response.ok) {

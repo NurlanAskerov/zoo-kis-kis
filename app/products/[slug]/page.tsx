@@ -17,11 +17,11 @@ const getCachedProductBySlug = unstable_cache(
 );
 
 type ProductDetailParams = {
-  params: { slug: string } | Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>;
 };
 
 export default async function ProductDetailPage({ params }: ProductDetailParams) {
-  const { slug } = await Promise.resolve(params);
+  const { slug } = await params;
   let product;
 
   try {

@@ -5,90 +5,143 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type Product } from '@/lib/data';
 import { ProductCard } from './ProductCard';
 
+const AUTO_SCROLL_MS = 5600;
+const RESUME_AFTER_INTERACTION_MS = 3200;
+
 export function ProductCarousel({ items }: { items: Product[] }) {
   const marqueeRef = useRef<HTMLDivElement | null>(null);
-  const touchStartXRef = useRef<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const resumeTimerRef = useRef<number | null>(null);
+  const pausedRef = useRef(false);
+  const pointerDownRef = useRef(false);
+  const dragStartXRef = useRef<number | null>(null);
+  const dragStartScrollLeftRef = useRef(0);
   const source = items.length > 0 ? items : [];
   const loop = useMemo(() => source, [source]);
 
-  function getStep() {
-    const marquee = marqueeRef.current;
-    if (!marquee) return Math.round(window.innerWidth * 0.82);
-
-    const firstCard = marquee.querySelector<HTMLElement>('.marquee-card');
-    const gap = window.matchMedia('(max-width: 768px)').matches ? 14 : 20;
-    return (firstCard?.offsetWidth ?? Math.round(window.innerWidth * 0.78)) + gap;
+  function clearResumeTimer() {
+    if (resumeTimerRef.current !== null) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
   }
 
-  function scrollOne(direction: 'left' | 'right') {
+  function pauseAutoScroll() {
+    pausedRef.current = true;
+    clearResumeTimer();
+  }
+
+  function resumeAutoScroll(delay = RESUME_AFTER_INTERACTION_MS) {
+    clearResumeTimer();
+    resumeTimerRef.current = window.setTimeout(() => {
+      pausedRef.current = false;
+      resumeTimerRef.current = null;
+    }, delay);
+  }
+
+  function getStep() {
+    const marquee = marqueeRef.current;
+    if (!marquee) return typeof window === 'undefined' ? 260 : Math.round(window.innerWidth * 0.82);
+
+    const firstCard = marquee.querySelector<HTMLElement>('.marquee-card');
+    const track = marquee.querySelector<HTMLElement>('.marquee-track');
+    const computedGap = track ? Number.parseFloat(window.getComputedStyle(track).columnGap || window.getComputedStyle(track).gap || '0') : 0;
+    const fallbackGap = window.matchMedia('(max-width: 768px)').matches ? 14 : 20;
+    return (firstCard?.offsetWidth ?? Math.round(window.innerWidth * 0.78)) + (Number.isFinite(computedGap) && computedGap > 0 ? computedGap : fallbackGap);
+  }
+
+  function scrollToPosition(left: number, behavior: ScrollBehavior = 'smooth') {
     const marquee = marqueeRef.current;
     if (!marquee) return;
 
+    const maxLeft = Math.max(0, marquee.scrollWidth - marquee.clientWidth);
+    marquee.scrollTo({ left: Math.min(Math.max(0, left), maxLeft), behavior });
+  }
+
+  function scrollOne(direction: 'left' | 'right', fromUser = true) {
+    const marquee = marqueeRef.current;
+    if (!marquee) return;
+
+    if (fromUser) {
+      pauseAutoScroll();
+      resumeAutoScroll();
+    }
+
     const step = getStep();
-    const nextLeft = direction === 'right' ? marquee.scrollLeft + step : marquee.scrollLeft - step;
+    const maxLeft = Math.max(0, marquee.scrollWidth - marquee.clientWidth);
+    if (maxLeft <= 0) return;
 
-    marquee.scrollTo({
-      left: Math.max(0, nextLeft),
-      behavior: 'smooth'
-    });
+    if (direction === 'right') {
+      const nearEnd = marquee.scrollLeft + step >= maxLeft - 6;
+      scrollToPosition(nearEnd ? 0 : marquee.scrollLeft + step);
+      return;
+    }
+
+    const nearStart = marquee.scrollLeft - step <= 6;
+    scrollToPosition(nearStart ? maxLeft : marquee.scrollLeft - step);
   }
 
-  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
-    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    pointerDownRef.current = true;
+    pauseAutoScroll();
+
+    if (event.pointerType !== 'touch') {
+      dragStartXRef.current = event.clientX;
+      dragStartScrollLeftRef.current = marqueeRef.current?.scrollLeft ?? 0;
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
   }
 
-  function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
-    const startX = touchStartXRef.current;
-    const endX = event.changedTouches[0]?.clientX ?? null;
-    touchStartXRef.current = null;
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const marquee = marqueeRef.current;
+    const dragStartX = dragStartXRef.current;
+    if (!marquee || dragStartX === null || event.pointerType === 'touch') return;
 
-    if (startX === null || endX === null) return;
+    event.preventDefault();
+    const deltaX = event.clientX - dragStartX;
+    marquee.scrollLeft = dragStartScrollLeftRef.current - deltaX;
+  }
 
-    const delta = startX - endX;
-    if (Math.abs(delta) < 36) return;
-
-    scrollOne(delta > 0 ? 'right' : 'left');
+  function handlePointerEnd(event?: React.PointerEvent<HTMLDivElement>) {
+    if (!pointerDownRef.current) return;
+    pointerDownRef.current = false;
+    dragStartXRef.current = null;
+    if (event?.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    resumeAutoScroll();
   }
 
   useEffect(() => {
     const marquee = marqueeRef.current;
     if (!marquee || source.length < 2) return;
 
-    let timer: number | null = null;
+    pausedRef.current = false;
 
-    const startSlider = () => {
-      if (timer !== null) {
-        window.clearInterval(timer);
-        timer = null;
-      }
-
-      timer = window.setInterval(() => {
-        const step = getStep();
-        const nearEnd = marquee.scrollLeft + marquee.clientWidth + step >= marquee.scrollWidth - 8;
-
-        if (nearEnd) {
-          marquee.scrollTo({ left: 0, behavior: 'smooth' });
-          return;
-        }
-
-        marquee.scrollBy({ left: step, behavior: 'smooth' });
-      }, 5600);
-    };
-
-    startSlider();
+    intervalRef.current = window.setInterval(() => {
+      if (pausedRef.current || document.hidden) return;
+      scrollOne('right', false);
+    }, AUTO_SCROLL_MS);
 
     return () => {
-      if (timer !== null) {
-        window.clearInterval(timer);
-        timer = null;
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
+      clearResumeTimer();
     };
   }, [source.length]);
 
   if (!source.length) return null;
 
   return (
-    <div className="carousel-shell">
+    <div
+      className="carousel-shell"
+      onMouseEnter={pauseAutoScroll}
+      onMouseLeave={() => resumeAutoScroll(1200)}
+      onFocus={pauseAutoScroll}
+      onBlur={() => resumeAutoScroll(1200)}
+    >
       {source.length > 1 ? (
         <button className="carousel-arrow carousel-arrow-left" type="button" aria-label="Əvvəlki məhsullar" onClick={() => scrollOne('left')}>
           <ChevronLeft size={20} />
@@ -99,8 +152,11 @@ export function ProductCarousel({ items }: { items: Product[] }) {
         className="marquee"
         aria-label="Product carousel"
         ref={marqueeRef}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
       >
         <div className="marquee-track">
           {loop.map((product, index) => (

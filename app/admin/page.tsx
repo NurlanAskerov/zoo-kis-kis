@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
-import { AlertTriangle, CheckCircle2, ImagePlus, Loader2, LockKeyhole, LogOut, Save, ShieldCheck, Star, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ImagePlus, Loader2, LockKeyhole, LogOut, Pencil, Save, Search, ShieldCheck, Star, Trash2, X } from 'lucide-react';
 import {
   audienceOptions,
   collectionOptions,
@@ -151,15 +151,16 @@ function resolveBadge(form: ProductForm) {
   };
 }
 
-function formToProduct(form: ProductForm): Product {
+function formToProduct(form: ProductForm, baseProduct?: Product | null): Product {
   const imageList = form.imagesText.split('\n').map(item => item.trim()).filter(Boolean);
   const image = form.image.trim() || imageList[0] || '/products/cat-food.svg';
   const nameAz = form.nameAz.trim() || 'Yeni məhsul';
   const descriptionAz = form.descriptionAz.trim() || 'Məhsul haqqında məlumat.';
+  const slug = baseProduct?.slug || slugify(nameAz);
 
   return {
-    id: Date.now(),
-    slug: slugify(nameAz),
+    id: baseProduct?.id || slug,
+    slug,
     name: {
       az: nameAz,
       en: form.nameEn.trim() || nameAz,
@@ -302,6 +303,89 @@ function statusText(status: ImageUploadStatus) {
   return 'Upload alınmadı';
 }
 
+function imageSlotsFromUrls(urls: string[], prefix = 'image'): ImageSlot[] {
+  return urls.filter(Boolean).map((url, index) => ({
+    id: `${prefix}-${index}-${url}`,
+    name: `Şəkil ${index + 1}`,
+    previewUrl: url,
+    url,
+    status: 'uploaded' as ImageUploadStatus
+  }));
+}
+
+function initialImageSlots() {
+  return imageSlotsFromUrls(initialForm.imagesText.split('\n').map(item => item.trim()).filter(Boolean), 'initial');
+}
+
+function badgePresetFromProduct(product: Product): BadgePreset {
+  const badgeAz = product.badge?.az?.trim().toLowerCase();
+  if (!badgeAz) return 'none';
+
+  const preset = (Object.entries(badgePresets) as [BadgePreset, { az: string; en: string; ru: string }][])
+    .find(([key, value]) => key !== 'none' && key !== 'custom' && value.az.toLowerCase() === badgeAz)?.[0];
+
+  return preset || 'custom';
+}
+
+function productToForm(product: Product): ProductForm {
+  const images = (product.images?.length ? product.images : [product.image]).filter(Boolean);
+  const badgePreset = badgePresetFromProduct(product);
+  const isCustomBadge = badgePreset === 'custom';
+
+  return {
+    nameAz: product.name.az || '',
+    nameEn: product.name.en || product.name.az || '',
+    nameRu: product.name.ru || product.name.az || '',
+    descriptionAz: product.description.az || '',
+    descriptionEn: product.description.en || product.description.az || '',
+    descriptionRu: product.description.ru || product.description.az || '',
+    categoryKey: product.categoryKey || categoryKeyFromType(product.typeKey),
+    typeKey: product.typeKey,
+    audiences: product.audiences?.length ? product.audiences : ['allPets'],
+    collections: product.collections ?? [],
+    price: String(product.price ?? 0),
+    oldPrice: product.oldPrice ? String(product.oldPrice) : '',
+    image: images[0] || product.image || '/products/cat-food.svg',
+    imagesText: images.join('\n'),
+    badgePreset,
+    badgeCustomAz: isCustomBadge ? product.badge?.az || '' : '',
+    badgeCustomEn: isCustomBadge ? product.badge?.en || '' : '',
+    badgeCustomRu: isCustomBadge ? product.badge?.ru || '' : '',
+    stock: product.stock,
+    active: product.active !== false
+  };
+}
+
+function normalizeSearch(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[ə]/g, 'e')
+    .replace(/[ı]/g, 'i')
+    .replace(/[ö]/g, 'o')
+    .replace(/[ü]/g, 'u')
+    .replace(/[ğ]/g, 'g')
+    .replace(/[ş]/g, 's')
+    .replace(/[ç]/g, 'c')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function productMatchesSearch(product: Product, query: string) {
+  const needle = normalizeSearch(query);
+  if (!needle) return true;
+
+  const haystack = normalizeSearch([
+    product.name.az,
+    product.name.en,
+    product.name.ru,
+    product.slug,
+    product.price
+  ].join(' '));
+
+  return haystack.includes(needle);
+}
+
 export default function AdminPage() {
   const { t, lang } = useLanguage();
   const { products, refreshProducts } = useCatalog();
@@ -313,12 +397,18 @@ export default function AdminPage() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [message, setMessage] = useState('');
   const [form, setForm] = useState<ProductForm>(initialForm);
-  const [imageSlots, setImageSlots] = useState<ImageSlot[]>(() => initialForm.imagesText.split('\n').filter(Boolean).map((url, index) => ({ id: `initial-${index}`, name: `Şəkil ${index + 1}`, previewUrl: url, url, status: 'uploaded' as ImageUploadStatus })));
+  const [imageSlots, setImageSlots] = useState<ImageSlot[]>(initialImageSlots);
   const [adminTab, setAdminTab] = useState<AdminTab>('active');
+  const [adminSearch, setAdminSearch] = useState('');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [togglePendingSlugs, setTogglePendingSlugs] = useState<Set<string>>(() => new Set());
   const selectedDepartment = getDepartmentForProductType(form.typeKey);
   const adminSubcategoryOptions = getSubcategoryOptionsForDepartment(selectedDepartment);
-  const activeProducts = useMemo(() => adminProducts.filter(product => product.active !== false), [adminProducts]);
-  const inactiveProducts = useMemo(() => adminProducts.filter(product => product.active === false), [adminProducts]);
+  const searchedProducts = useMemo(() => adminProducts.filter(product => productMatchesSearch(product, adminSearch)), [adminProducts, adminSearch]);
+  const activeProducts = useMemo(() => searchedProducts.filter(product => product.active !== false), [searchedProducts]);
+  const inactiveProducts = useMemo(() => searchedProducts.filter(product => product.active === false), [searchedProducts]);
+  const totalActiveProducts = useMemo(() => adminProducts.filter(product => product.active !== false).length, [adminProducts]);
+  const totalInactiveProducts = useMemo(() => adminProducts.filter(product => product.active === false).length, [adminProducts]);
 
   function changeDepartment(department: ProductDepartmentKey) {
     const firstSubcategory = getSubcategoryOptionsForDepartment(department)[0]?.key ?? 'dryFood';
@@ -329,7 +419,7 @@ export default function AdminPage() {
     setForm({ ...form, typeKey, categoryKey: categoryKeyFromType(typeKey) });
   }
 
-  const previewProduct = useMemo(() => formToProduct(form), [form]);
+  const previewProduct = useMemo(() => formToProduct(form, editingProduct), [form, editingProduct]);
 
   async function checkSession() {
     const response = await fetch('/api/admin/me', { cache: 'no-store' }).catch(() => null);
@@ -346,8 +436,10 @@ export default function AdminPage() {
   async function loadAdminProducts() {
     const response = await fetch('/api/products?includeInactive=1', { cache: 'no-store' }).catch(() => null);
     if (!response?.ok) return;
-    const data = await response.json().catch(() => ({ products: [] })) as { products?: Product[] };
-    if (Array.isArray(data.products)) setAdminProducts(data.products);
+    const data = await response.json().catch(() => ({ products: [] })) as { databaseReady?: boolean; products?: Product[] };
+    if (Array.isArray(data.products) && (data.databaseReady !== false || data.products.length > 0)) {
+      setAdminProducts(data.products);
+    }
   }
 
   useEffect(() => {
@@ -469,37 +561,100 @@ export default function AdminPage() {
     });
   }
 
+  function startNewProduct() {
+    setEditingProduct(null);
+    setForm(initialForm);
+    setImageSlots(initialImageSlots());
+    setMessage('');
+    setAdminTab('add');
+  }
+
+  function startEditProduct(product: Product) {
+    const nextForm = productToForm(product);
+    const images = nextForm.imagesText.split('\n').map(item => item.trim()).filter(Boolean);
+    setEditingProduct(product);
+    setForm(nextForm);
+    setImageSlots(imageSlotsFromUrls(images, `edit-${product.slug}`));
+    setMessage('');
+    setAdminTab('add');
+
+    window.requestAnimationFrame(() => {
+      document.getElementById('add')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function cancelEdit() {
+    startNewProduct();
+  }
+
   async function saveProduct() {
+    if (saving) return;
+
     setSaving(true);
     setMessage('');
-    const product = formToProduct(form);
-    const response = await fetch('/api/products', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(product)
-    });
-    const data = await response.json().catch(() => ({}));
-    setSaving(false);
+    const product = formToProduct(form, editingProduct);
 
-    if (!response.ok) {
-      setMessage('Məhsul saxlanmadı. Admin sessiyasını və .env şifrəsini yoxlayın.');
-      return;
+    try {
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product)
+      });
+      const data = await response.json().catch(() => ({})) as { ok?: boolean; saved?: boolean; product?: Product; message?: string };
+
+      if (!response.ok || data.ok === false) {
+        setMessage(data.message || 'Məhsul saxlanmadı. Admin sessiyasını və .env şifrəsini yoxlayın.');
+        return;
+      }
+
+      const savedProduct = data.product ?? product;
+      setAdminProducts(current => {
+        const withoutOld = current.filter(item => item.slug !== product.slug && item.slug !== editingProduct?.slug);
+        return [savedProduct, ...withoutOld];
+      });
+      setEditingProduct(savedProduct);
+      setMessage(data.saved === false ? 'Məhsul preview üçün hazırdır. Turso məlumatları .env-də yazılandan sonra bazaya saxlanacaq.' : editingProduct ? 'Məhsul redaktə edildi və bazaya yazıldı.' : 'Məhsul bazaya saxlandı.');
+      await refreshProducts();
+      await loadAdminProducts();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Məhsul saxlanmadı. Bağlantını yoxlayın.');
+    } finally {
+      setSaving(false);
     }
-
-    setMessage(data.saved === false ? 'Məhsul preview üçün hazırdır. Turso məlumatları .env-də yazılandan sonra bazaya saxlanacaq.' : 'Məhsul bazaya saxlandı.');
-    await refreshProducts();
-    await loadAdminProducts();
   }
 
   async function toggleActive(product: Product) {
-    const response = await fetch(`/api/products/${product.slug}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active: product.active === false })
-    });
-    if (response.ok) {
-      await refreshProducts();
-      await loadAdminProducts();
+    const nextActive = product.active === false;
+    const slug = product.slug;
+    if (togglePendingSlugs.has(slug)) return;
+
+    setTogglePendingSlugs(current => new Set(current).add(slug));
+    setAdminProducts(current => current.map(item => item.slug === slug ? { ...item, active: nextActive } : item));
+    setMessage('');
+
+    try {
+      const response = await fetch(`/api/products/${slug}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: nextActive })
+      });
+      const data = await response.json().catch(() => ({})) as { ok?: boolean; message?: string };
+
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.message || 'Status dəyişmədi.');
+      }
+
+      void refreshProducts();
+      void loadAdminProducts();
+    } catch (error) {
+      setAdminProducts(current => current.map(item => item.slug === slug ? { ...item, active: product.active } : item));
+      setMessage(error instanceof Error ? error.message : 'Status dəyişmədi. Yenidən yoxlayın.');
+    } finally {
+      setTogglePendingSlugs(current => {
+        const next = new Set(current);
+        next.delete(slug);
+        return next;
+      });
     }
   }
 
@@ -507,26 +662,55 @@ export default function AdminPage() {
   function renderProductList(list: Product[], emptyText: string) {
     return list.length ? (
       <div className="admin-product-cards">
-        {list.map(product => (
-          <div className="admin-product-card" key={product.slug}>
-            <div className="admin-product-mini">
-              <img src={(product.images?.[0] || product.image)} alt={product.name[lang]} draggable={false} />
-              <div>
-                <strong>{product.name[lang]}</strong>
-                <span>{getDepartmentLabel(getDepartmentForProductType(product.typeKey), lang)} · {getProductTypeLabel(product.typeKey, lang)}</span>
-                <small>{stockLabels[product.stock][lang]} · {product.price} AZN</small>
+        {list.map(product => {
+          const pending = togglePendingSlugs.has(product.slug);
+
+          return (
+            <div className="admin-product-card" key={product.slug}>
+              <div className="admin-product-mini">
+                <img src={(product.images?.[0] || product.image)} alt={product.name[lang]} draggable={false} />
+                <div>
+                  <strong>{product.name[lang]}</strong>
+                  <span>{getDepartmentLabel(getDepartmentForProductType(product.typeKey), lang)} · {getProductTypeLabel(product.typeKey, lang)}</span>
+                  <small>{stockLabels[product.stock][lang]} · {product.price} AZN</small>
+                </div>
+              </div>
+              <div className="admin-product-row-actions">
+                <button className="tiny-btn admin-edit-btn" type="button" onClick={() => startEditProduct(product)}>
+                  <Pencil size={15} /> Redaktə et
+                </button>
+                <button className={`switch ${product.active === false ? '' : 'on'} ${pending ? 'pending' : ''}`} type="button" onClick={() => toggleActive(product)} aria-label="active toggle" disabled={pending}>
+                  <span />
+                </button>
               </div>
             </div>
-            <button className={`switch ${product.active === false ? '' : 'on'}`} type="button" onClick={() => toggleActive(product)} aria-label="active toggle">
-              <span />
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     ) : (
       <div className="admin-empty-state">
         <p>{emptyText}</p>
-        <button className="btn btn-primary" type="button" onClick={() => setAdminTab('add')}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
+        <button className="btn btn-primary" type="button" onClick={startNewProduct}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
+      </div>
+    );
+  }
+
+  function renderAdminSearch() {
+    return (
+      <div className="admin-search-row">
+        <Search size={17} aria-hidden="true" />
+        <input
+          className="input"
+          value={adminSearch}
+          onChange={event => setAdminSearch(event.target.value)}
+          placeholder="Məhsul adına görə axtar..."
+          aria-label="Məhsul adına görə axtar"
+        />
+        {adminSearch ? (
+          <button className="tiny-btn" type="button" onClick={() => setAdminSearch('')} aria-label="Axtarışı təmizlə">
+            <X size={15} /> Təmizlə
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -565,21 +749,21 @@ export default function AdminPage() {
           <div className="admin-summary-grid">
             <button className={adminTab === 'active' ? 'admin-summary-card active' : 'admin-summary-card'} type="button" onClick={() => setAdminTab('active')}>
               <span>Aktiv məhsullar</span>
-              <strong>{activeProducts.length}</strong>
+              <strong>{totalActiveProducts}</strong>
             </button>
-            <button className={adminTab === 'add' ? 'admin-summary-card active' : 'admin-summary-card'} type="button" onClick={() => setAdminTab('add')}>
-              <span>Yeni məhsul</span>
-              <strong>+</strong>
+            <button className={adminTab === 'add' ? 'admin-summary-card active' : 'admin-summary-card'} type="button" onClick={startNewProduct}>
+              <span>{editingProduct ? 'Redaktə edilir' : 'Yeni məhsul'}</span>
+              <strong>{editingProduct ? '✎' : '+'}</strong>
             </button>
             <button className={adminTab === 'inactive' ? 'admin-summary-card active' : 'admin-summary-card'} type="button" onClick={() => setAdminTab('inactive')}>
               <span>Passiv məhsullar</span>
-              <strong>{inactiveProducts.length}</strong>
+              <strong>{totalInactiveProducts}</strong>
             </button>
           </div>
 
           <div className="admin-tabbar" role="tablist" aria-label="Admin panel tabs">
             <button className={adminTab === 'active' ? 'active' : ''} type="button" onClick={() => setAdminTab('active')}>Aktiv məhsullar</button>
-            <button className={adminTab === 'add' ? 'active' : ''} type="button" onClick={() => setAdminTab('add')}>+ Yeni məhsul əlavə et</button>
+            <button className={adminTab === 'add' ? 'active' : ''} type="button" onClick={startNewProduct}>+ Yeni məhsul əlavə et</button>
             <button className={adminTab === 'inactive' ? 'active' : ''} type="button" onClick={() => setAdminTab('inactive')}>Passiv məhsullar</button>
           </div>
 
@@ -591,18 +775,27 @@ export default function AdminPage() {
                   <h2>Aktiv məhsullar</h2>
                   <p className="microcopy">Saytda görünən məhsullar. Məhsulu gizlətmək üçün toggle-i söndür.</p>
                 </div>
-                <button className="btn btn-primary" type="button" onClick={() => setAdminTab('add')}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
+                <button className="btn btn-primary" type="button" onClick={startNewProduct}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
               </div>
-              {renderProductList(activeProducts, 'Aktiv məhsul yoxdur. İlk məhsulu əlavə edin.')}
+              {renderAdminSearch()}
+              {message ? <p className="form-success">{message}</p> : null}
+              {renderProductList(activeProducts, adminSearch.trim() ? 'Axtarışa uyğun aktiv məhsul tapılmadı.' : 'Aktiv məhsul yoxdur. İlk məhsulu əlavə edin.')}
             </section>
           ) : null}
 
           {adminTab === 'add' ? (
             <section id="add" className="info-card admin-editor-card">
-              <div>
-                <p className="eyebrow">{t('addProduct')}</p>
-                <h2>{t('adminProductEditor')}</h2>
-                <p>{t('adminProductEditorText')}</p>
+              <div className="admin-editor-head">
+                <div>
+                  <p className="eyebrow">{editingProduct ? 'Məhsul redaktəsi' : t('addProduct')}</p>
+                  <h2>{editingProduct ? form.nameAz || 'Məhsulu redaktə et' : t('adminProductEditor')}</h2>
+                  <p>{editingProduct ? 'Dəyişiklikləri saxlayanda mövcud məhsul yenilənəcək, yeni dublikat yaranmayacaq.' : t('adminProductEditorText')}</p>
+                </div>
+                {editingProduct ? (
+                  <button className="btn btn-soft" type="button" onClick={cancelEdit}>
+                    <X size={17} /> Redaktəni bitir
+                  </button>
+                ) : null}
               </div>
 
               <div className="admin-editor-layout">
@@ -702,7 +895,7 @@ export default function AdminPage() {
                     <span>{form.active ? t('activeProduct') : t('inactiveProduct')}</span>
                     <button type="button" className={`switch ${form.active ? 'on' : ''}`} onClick={() => setForm({ ...form, active: !form.active })}><span /></button>
                   </label>
-                  <button className="btn btn-primary" type="button" onClick={saveProduct} disabled={saving}><Save size={17} /> {saving ? t('saving') : t('save')}</button>
+                  <button className="btn btn-primary" type="button" onClick={saveProduct} disabled={saving}><Save size={17} /> {saving ? t('saving') : editingProduct ? 'Redaktəni saxla' : t('save')}</button>
                   {message ? <p className="form-success">{message}</p> : null}
                 </form>
 
@@ -723,9 +916,11 @@ export default function AdminPage() {
                   <h2>Passiv məhsullar</h2>
                   <p className="microcopy">Bu məhsullar saytda görünmür. Toggle-i yandıranda yenidən aktiv olur.</p>
                 </div>
-                <button className="btn btn-primary" type="button" onClick={() => setAdminTab('add')}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
+                <button className="btn btn-primary" type="button" onClick={startNewProduct}><ImagePlus size={17} /> Yeni məhsul əlavə et</button>
               </div>
-              {renderProductList(inactiveProducts, 'Passiv məhsul yoxdur.')}
+              {renderAdminSearch()}
+              {message ? <p className="form-success">{message}</p> : null}
+              {renderProductList(inactiveProducts, adminSearch.trim() ? 'Axtarışa uyğun passiv məhsul tapılmadı.' : 'Passiv məhsul yoxdur.')}
             </section>
           ) : null}
         </div>
