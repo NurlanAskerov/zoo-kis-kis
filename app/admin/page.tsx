@@ -799,104 +799,188 @@ export default function AdminPage() {
               </div>
 
               <div className="admin-editor-layout">
-                <form className="form-grid admin-product-form" onSubmit={event => event.preventDefault()}>
-                  <div className="form-section-title">AZ / EN / RU</div>
-                  <input className="input" value={form.nameAz} onChange={event => setForm({ ...form, nameAz: event.target.value })} placeholder="Məhsul adı AZ" />
-                  <input className="input" value={form.nameEn} onChange={event => setForm({ ...form, nameEn: event.target.value })} placeholder="Product name EN" />
-                  <input className="input" value={form.nameRu} onChange={event => setForm({ ...form, nameRu: event.target.value })} placeholder="Название RU" />
-                  <textarea className="input" value={form.descriptionAz} onChange={event => setForm({ ...form, descriptionAz: event.target.value })} placeholder="Açıqlama AZ" />
-                  <textarea className="input" value={form.descriptionEn} onChange={event => setForm({ ...form, descriptionEn: event.target.value })} placeholder="Description EN" />
-                  <textarea className="input" value={form.descriptionRu} onChange={event => setForm({ ...form, descriptionRu: event.target.value })} placeholder="Описание RU" />
-
-                  <div className="form-section-title">Şəkillər</div>
-                  <label className="file-upload-box add-image-box">
-                    {uploadingImages ? <Loader2 size={22} className="spin" /> : <ImagePlus size={22} />}
-                    <span>+ Şəkil əlavə et</span>
-                    <small>Şəkil seçilən kimi preview görünür. Böyük şəkillər keyfiyyəti qorunaraq WebP-ə çevrilir, ölçüsü azaldılır və upload arxa fonda R2-yə gedir.</small>
-                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" multiple onChange={handleImages} />
-                  </label>
-
-                  <div className="admin-image-list">
-                    {imageSlots.map((slot, index) => (
-                      <div className={`admin-image-item ${slot.status}`} key={slot.id}>
-                        <div className="admin-image-thumb">
-                          {slot.previewUrl ? <img src={slot.previewUrl} alt={slot.name} draggable={false} /> : <ImagePlus size={22} />}
-                        </div>
-                        <div className="admin-image-info">
-                          <strong>{index + 1}. {slot.name}</strong>
-                          <span className="admin-image-status">
-                            {slot.status === 'uploaded' ? <CheckCircle2 size={14} /> : slot.status === 'failed' ? <AlertTriangle size={14} /> : <Loader2 size={14} className="spin" />}
-                            {statusText(slot.status)}
-                          </span>
-                          {slot.message ? <small>{slot.message}</small> : null}
-                        </div>
-                        <div className="admin-image-actions">
-                          <button className="tiny-btn" type="button" onClick={() => makeMainImage(slot.id)} disabled={index === 0}>
-                            <Star size={15} /> Əsas et
-                          </button>
-                          <button className="tiny-btn" type="button" onClick={() => removeImage(slot.id)} aria-label="Şəkli sil">
-                            <Trash2 size={15} /> Sil
-                          </button>
-                        </div>
+                <form className="admin-product-form polished-editor-form" onSubmit={event => event.preventDefault()}>
+                  <section className="admin-form-section admin-form-section-main">
+                    <div className="admin-form-section-head">
+                      <span className="form-step">1</span>
+                      <div>
+                        <h3>Məhsul məlumatları</h3>
+                        <p>Ad və açıqlamanı üç dildə səliqəli şəkildə doldur.</p>
                       </div>
-                    ))}
-                  </div>
-                  <p className="microcopy">Birinci şəkil əsas məhsul şəkli sayılır. R2 alınmasa da preview qalır, amma publish üçün R2 env-lərini yoxlayın.</p>
-
-                  <div className="form-section-title">{t('filtersAndPrice')}</div>
-                  <div className="form-row-2">
-                    <select className="input" value={selectedDepartment} onChange={event => changeDepartment(event.target.value as ProductDepartmentKey)} aria-label={t('department')}>
-                      {productDepartmentOptions.map(department => <option value={department.key} key={department.key}>{department.label[lang]}</option>)}
-                    </select>
-                    <select className="input" value={form.typeKey} onChange={event => changeSubcategory(event.target.value as ProductTypeKey)} aria-label={t('subcategory')}>
-                      {adminSubcategoryOptions.map(type => <option value={type.key} key={type.key}>{type.label[lang]}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="check-grid">
-                    {audienceOptions.map(audience => (
-                      <label className="check-pill" key={audience.key}>
-                        <input type="checkbox" checked={form.audiences.includes(audience.key)} onChange={() => setForm({ ...form, audiences: toggleItem(form.audiences, audience.key) })} />
-                        {getAudienceLabel(audience.key, lang)}
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="check-grid">
-                    {collectionOptions.map(collection => (
-                      <label className="check-pill" key={collection.key}>
-                        <input type="checkbox" checked={form.collections.includes(collection.key)} onChange={() => setForm({ ...form, collections: toggleItem(form.collections, collection.key) })} />
-                        {collection.label[lang]}
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="form-row-3">
-                    <input className="input" type="number" min="0" value={form.price} onChange={event => setForm({ ...form, price: event.target.value })} placeholder={t('price')} />
-                    <input className="input" type="number" min="0" value={form.oldPrice} onChange={event => setForm({ ...form, oldPrice: event.target.value })} placeholder={t('oldPriceField')} />
-                    <select className="input" value={form.stock} onChange={event => setForm({ ...form, stock: event.target.value as StockKey })}>
-                      {Object.entries(stockLabels).map(([key, label]) => <option value={key} key={key}>{label[lang]}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="form-section-title">Kart badge</div>
-                  <select className="input" value={form.badgePreset} onChange={event => setForm({ ...form, badgePreset: event.target.value as BadgePreset })}>
-                    {Object.entries(badgePresetLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                  </select>
-                  {form.badgePreset === 'custom' ? (
-                    <div className="form-row-3">
-                      <input className="input" value={form.badgeCustomAz} onChange={event => setForm({ ...form, badgeCustomAz: event.target.value })} placeholder="Badge AZ" />
-                      <input className="input" value={form.badgeCustomEn} onChange={event => setForm({ ...form, badgeCustomEn: event.target.value })} placeholder="Badge EN" />
-                      <input className="input" value={form.badgeCustomRu} onChange={event => setForm({ ...form, badgeCustomRu: event.target.value })} placeholder="Badge RU" />
                     </div>
-                  ) : null}
+                    <div className="admin-locale-grid">
+                      <label className="field-stack">
+                        <span>Məhsul adı AZ</span>
+                        <input className="input" value={form.nameAz} onChange={event => setForm({ ...form, nameAz: event.target.value })} placeholder="Məhsul adı AZ" />
+                      </label>
+                      <label className="field-stack">
+                        <span>Product name EN</span>
+                        <input className="input" value={form.nameEn} onChange={event => setForm({ ...form, nameEn: event.target.value })} placeholder="Product name EN" />
+                      </label>
+                      <label className="field-stack">
+                        <span>Название RU</span>
+                        <input className="input" value={form.nameRu} onChange={event => setForm({ ...form, nameRu: event.target.value })} placeholder="Название RU" />
+                      </label>
+                      <label className="field-stack field-stack-textarea">
+                        <span>Açıqlama AZ</span>
+                        <textarea className="input" value={form.descriptionAz} onChange={event => setForm({ ...form, descriptionAz: event.target.value })} placeholder="Açıqlama AZ" />
+                      </label>
+                      <label className="field-stack field-stack-textarea">
+                        <span>Description EN</span>
+                        <textarea className="input" value={form.descriptionEn} onChange={event => setForm({ ...form, descriptionEn: event.target.value })} placeholder="Description EN" />
+                      </label>
+                      <label className="field-stack field-stack-textarea">
+                        <span>Описание RU</span>
+                        <textarea className="input" value={form.descriptionRu} onChange={event => setForm({ ...form, descriptionRu: event.target.value })} placeholder="Описание RU" />
+                      </label>
+                    </div>
+                  </section>
 
-                  <label className="toggle-row">
-                    <span>{form.active ? t('activeProduct') : t('inactiveProduct')}</span>
-                    <button type="button" className={`switch ${form.active ? 'on' : ''}`} onClick={() => setForm({ ...form, active: !form.active })}><span /></button>
-                  </label>
-                  <button className="btn btn-primary" type="button" onClick={saveProduct} disabled={saving}><Save size={17} /> {saving ? t('saving') : editingProduct ? 'Redaktəni saxla' : t('save')}</button>
-                  {message ? <p className="form-success">{message}</p> : null}
+                  <section className="admin-form-section admin-form-section-media">
+                    <div className="admin-form-section-head">
+                      <span className="form-step">2</span>
+                      <div>
+                        <h3>Şəkillər</h3>
+                        <p>Birinci şəkil məhsul kartında əsas şəkil kimi görünür.</p>
+                      </div>
+                    </div>
+                    <label className="file-upload-box add-image-box">
+                      {uploadingImages ? <Loader2 size={22} className="spin" /> : <ImagePlus size={22} />}
+                      <span>+ Şəkil əlavə et</span>
+                      <small>Şəkil seçilən kimi preview görünür. Böyük şəkillər WebP-ə çevrilir və upload arxa fonda gedir.</small>
+                      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" multiple onChange={handleImages} />
+                    </label>
+
+                    <div className="admin-image-list">
+                      {imageSlots.map((slot, index) => (
+                        <div className={`admin-image-item ${slot.status}`} key={slot.id}>
+                          <div className="admin-image-thumb">
+                            {slot.previewUrl ? <img src={slot.previewUrl} alt={slot.name} draggable={false} /> : <ImagePlus size={22} />}
+                          </div>
+                          <div className="admin-image-info">
+                            <strong>{index + 1}. {slot.name}</strong>
+                            <span className="admin-image-status">
+                              {slot.status === 'uploaded' ? <CheckCircle2 size={14} /> : slot.status === 'failed' ? <AlertTriangle size={14} /> : <Loader2 size={14} className="spin" />}
+                              {statusText(slot.status)}
+                            </span>
+                            {slot.message ? <small>{slot.message}</small> : null}
+                          </div>
+                          <div className="admin-image-actions">
+                            <button className="tiny-btn" type="button" onClick={() => makeMainImage(slot.id)} disabled={index === 0}>
+                              <Star size={15} /> Əsas et
+                            </button>
+                            <button className="tiny-btn" type="button" onClick={() => removeImage(slot.id)} aria-label="Şəkli sil">
+                              <Trash2 size={15} /> Sil
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="microcopy">R2 alınmasa da preview qalır, amma publish üçün R2 env-lərini yoxlayın.</p>
+                  </section>
+
+                  <section className="admin-form-section admin-form-section-settings">
+                    <div className="admin-form-section-head">
+                      <span className="form-step">3</span>
+                      <div>
+                        <h3>{t('filtersAndPrice')}</h3>
+                        <p>Kateqoriya, qiymət, stok və kart badge-lərini buradan idarə et.</p>
+                      </div>
+                    </div>
+                    <div className="form-row-2">
+                      <label className="field-stack">
+                        <span>{t('department')}</span>
+                        <select className="input" value={selectedDepartment} onChange={event => changeDepartment(event.target.value as ProductDepartmentKey)} aria-label={t('department')}>
+                          {productDepartmentOptions.map(department => <option value={department.key} key={department.key}>{department.label[lang]}</option>)}
+                        </select>
+                      </label>
+                      <label className="field-stack">
+                        <span>{t('subcategory')}</span>
+                        <select className="input" value={form.typeKey} onChange={event => changeSubcategory(event.target.value as ProductTypeKey)} aria-label={t('subcategory')}>
+                          {adminSubcategoryOptions.map(type => <option value={type.key} key={type.key}>{type.label[lang]}</option>)}
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="admin-check-block">
+                      <span className="mini-label">Kimlər üçün</span>
+                      <div className="check-grid">
+                        {audienceOptions.map(audience => (
+                          <label className="check-pill" key={audience.key}>
+                            <input type="checkbox" checked={form.audiences.includes(audience.key)} onChange={() => setForm({ ...form, audiences: toggleItem(form.audiences, audience.key) })} />
+                            {getAudienceLabel(audience.key, lang)}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="admin-check-block">
+                      <span className="mini-label">Kolleksiya</span>
+                      <div className="check-grid">
+                        {collectionOptions.map(collection => (
+                          <label className="check-pill" key={collection.key}>
+                            <input type="checkbox" checked={form.collections.includes(collection.key)} onChange={() => setForm({ ...form, collections: toggleItem(form.collections, collection.key) })} />
+                            {collection.label[lang]}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="form-row-3">
+                      <label className="field-stack">
+                        <span>{t('price')}</span>
+                        <input className="input" type="number" min="0" value={form.price} onChange={event => setForm({ ...form, price: event.target.value })} placeholder={t('price')} />
+                      </label>
+                      <label className="field-stack">
+                        <span>{t('oldPriceField')}</span>
+                        <input className="input" type="number" min="0" value={form.oldPrice} onChange={event => setForm({ ...form, oldPrice: event.target.value })} placeholder={t('oldPriceField')} />
+                      </label>
+                      <label className="field-stack">
+                        <span>Stok</span>
+                        <select className="input" value={form.stock} onChange={event => setForm({ ...form, stock: event.target.value as StockKey })}>
+                          {Object.entries(stockLabels).map(([key, label]) => <option value={key} key={key}>{label[lang]}</option>)}
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="form-row-2 admin-badge-row">
+                      <label className="field-stack">
+                        <span>Kart badge</span>
+                        <select className="input" value={form.badgePreset} onChange={event => setForm({ ...form, badgePreset: event.target.value as BadgePreset })}>
+                          {Object.entries(badgePresetLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                        </select>
+                      </label>
+                      <label className="toggle-row polished-toggle-row">
+                        <span>{form.active ? t('activeProduct') : t('inactiveProduct')}</span>
+                        <button type="button" className={`switch ${form.active ? 'on' : ''}`} onClick={() => setForm({ ...form, active: !form.active })}><span /></button>
+                      </label>
+                    </div>
+
+                    {form.badgePreset === 'custom' ? (
+                      <div className="form-row-3">
+                        <label className="field-stack">
+                          <span>Badge AZ</span>
+                          <input className="input" value={form.badgeCustomAz} onChange={event => setForm({ ...form, badgeCustomAz: event.target.value })} placeholder="Badge AZ" />
+                        </label>
+                        <label className="field-stack">
+                          <span>Badge EN</span>
+                          <input className="input" value={form.badgeCustomEn} onChange={event => setForm({ ...form, badgeCustomEn: event.target.value })} placeholder="Badge EN" />
+                        </label>
+                        <label className="field-stack">
+                          <span>Badge RU</span>
+                          <input className="input" value={form.badgeCustomRu} onChange={event => setForm({ ...form, badgeCustomRu: event.target.value })} placeholder="Badge RU" />
+                        </label>
+                      </div>
+                    ) : null}
+                  </section>
+
+                  <div className="admin-editor-actions">
+                    <button className="btn btn-primary" type="button" onClick={saveProduct} disabled={saving}><Save size={17} /> {saving ? t('saving') : editingProduct ? 'Redaktəni saxla' : t('save')}</button>
+                    {editingProduct ? (
+                      <button className="btn btn-soft" type="button" onClick={cancelEdit}><X size={17} /> Ləğv et</button>
+                    ) : null}
+                  </div>
+                  {message ? <p className="form-success admin-editor-message">{message}</p> : null}
                 </form>
 
                 <aside id="preview" className="admin-preview-panel">

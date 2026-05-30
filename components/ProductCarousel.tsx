@@ -86,16 +86,14 @@ export const ProductCarousel = forwardRef<ProductCarouselHandle, { items: Produc
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    pointerDownRef.current = true;
     pauseAutoScroll();
 
-    if (event.pointerType === 'touch') {
-      return;
+    if (event.pointerType !== 'touch') {
+      dragStartXRef.current = event.clientX;
+      dragStartScrollLeftRef.current = marqueeRef.current?.scrollLeft ?? 0;
+      event.currentTarget.setPointerCapture?.(event.pointerId);
     }
-
-    pointerDownRef.current = true;
-    dragStartXRef.current = event.clientX;
-    dragStartScrollLeftRef.current = marqueeRef.current?.scrollLeft ?? 0;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -109,11 +107,6 @@ export const ProductCarousel = forwardRef<ProductCarouselHandle, { items: Produc
   }
 
   function handlePointerEnd(event?: React.PointerEvent<HTMLDivElement>) {
-    if (event?.pointerType === 'touch') {
-      resumeAutoScroll();
-      return;
-    }
-
     if (!pointerDownRef.current) return;
     pointerDownRef.current = false;
     dragStartXRef.current = null;
