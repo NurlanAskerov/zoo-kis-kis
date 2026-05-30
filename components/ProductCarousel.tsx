@@ -1,14 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { type Product } from '@/lib/data';
 import { ProductCard } from './ProductCard';
 
 const AUTO_SCROLL_MS = 5600;
 const RESUME_AFTER_INTERACTION_MS = 3200;
 
-export function ProductCarousel({ items }: { items: Product[] }) {
+export type ProductCarouselHandle = {
+  scrollPrevious: () => void;
+  scrollNext: () => void;
+};
+
+export const ProductCarousel = forwardRef<ProductCarouselHandle, { items: Product[] }>(function ProductCarousel({ items }, ref) {
   const marqueeRef = useRef<HTMLDivElement | null>(null);
   const intervalRef = useRef<number | null>(null);
   const resumeTimerRef = useRef<number | null>(null);
@@ -82,14 +86,16 @@ export function ProductCarousel({ items }: { items: Product[] }) {
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    pointerDownRef.current = true;
     pauseAutoScroll();
 
-    if (event.pointerType !== 'touch') {
-      dragStartXRef.current = event.clientX;
-      dragStartScrollLeftRef.current = marqueeRef.current?.scrollLeft ?? 0;
-      event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (event.pointerType === 'touch') {
+      return;
     }
+
+    pointerDownRef.current = true;
+    dragStartXRef.current = event.clientX;
+    dragStartScrollLeftRef.current = marqueeRef.current?.scrollLeft ?? 0;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -103,6 +109,11 @@ export function ProductCarousel({ items }: { items: Product[] }) {
   }
 
   function handlePointerEnd(event?: React.PointerEvent<HTMLDivElement>) {
+    if (event?.pointerType === 'touch') {
+      resumeAutoScroll();
+      return;
+    }
+
     if (!pointerDownRef.current) return;
     pointerDownRef.current = false;
     dragStartXRef.current = null;
@@ -111,6 +122,11 @@ export function ProductCarousel({ items }: { items: Product[] }) {
     }
     resumeAutoScroll();
   }
+
+  useImperativeHandle(ref, () => ({
+    scrollPrevious: () => scrollOne('left'),
+    scrollNext: () => scrollOne('right')
+  }));
 
   useEffect(() => {
     const marquee = marqueeRef.current;
@@ -142,12 +158,6 @@ export function ProductCarousel({ items }: { items: Product[] }) {
       onFocus={pauseAutoScroll}
       onBlur={() => resumeAutoScroll(1200)}
     >
-      {source.length > 1 ? (
-        <button className="carousel-arrow carousel-arrow-left" type="button" aria-label="Əvvəlki məhsullar" onClick={() => scrollOne('left')}>
-          <ChevronLeft size={20} />
-        </button>
-      ) : null}
-
       <div
         className="marquee"
         aria-label="Product carousel"
@@ -166,12 +176,6 @@ export function ProductCarousel({ items }: { items: Product[] }) {
           ))}
         </div>
       </div>
-
-      {source.length > 1 ? (
-        <button className="carousel-arrow carousel-arrow-right" type="button" aria-label="Növbəti məhsullar" onClick={() => scrollOne('right')}>
-          <ChevronRight size={20} />
-        </button>
-      ) : null}
     </div>
   );
-}
+});

@@ -1,20 +1,31 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { applyNoStoreHeaders } from '@/lib/http-cache';
 import { isAdminRequest } from '@/lib/admin-auth';
 import { getProductBySlugFromDb, hasDatabaseConfig, setProductActive } from '@/lib/db';
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return applyNoStoreHeaders(NextResponse.json(body, init));
+}
+
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
+  const wantsInactive = request.nextUrl.searchParams.get('includeInactive') === '1';
+  const includeInactive = wantsInactive && (await isAdminRequest());
 
   try {
-    const product = await getProductBySlugFromDb(id, true);
+    const product = await getProductBySlugFromDb(id, includeInactive);
     if (!product) {
-      return NextResponse.json({ ok: false, product: null, message: 'Məhsul tapılmadı.' }, { status: 404 });
+      return jsonResponse({ ok: false, product: null, message: 'Məhsul tapılmadı.' }, { status: 404 });
     }
 
-    return NextResponse.json({ ok: true, product });
+    return jsonResponse({ ok: true, product });
   } catch (error) {
     console.error('/api/products/[id] GET error', error);
-    return NextResponse.json({
+    return jsonResponse({
       ok: false,
       product: null,
       message: error instanceof Error ? error.message : 'Məhsul oxunmadı.'
@@ -24,7 +35,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   if (!(await isAdminRequest())) {
-    return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
+    return jsonResponse({ ok: false, message: 'Unauthorized' }, { status: 401 });
   }
 
   const { id } = await context.params;
@@ -32,14 +43,14 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const active = Boolean(body.active);
 
   if (!hasDatabaseConfig()) {
-    return NextResponse.json({ ok: true, saved: false, product: { slug: id, active }, message: 'Database is not configured yet.' });
+    return jsonResponse({ ok: true, saved: false, product: { slug: id, active }, message: 'Database is not configured yet.' });
   }
 
   try {
     await setProductActive(id, active);
-    return NextResponse.json({ ok: true, saved: true, product: { slug: id, active } });
+    return jsonResponse({ ok: true, saved: true, product: { slug: id, active } });
   } catch (error) {
     console.error('/api/products/[id] PATCH error', error);
-    return NextResponse.json({ ok: false, saved: false, message: error instanceof Error ? error.message : 'Status could not be updated.' }, { status: 500 });
+    return jsonResponse({ ok: false, saved: false, message: error instanceof Error ? error.message : 'Status could not be updated.' }, { status: 500 });
   }
 }

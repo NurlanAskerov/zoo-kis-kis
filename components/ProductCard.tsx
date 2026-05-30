@@ -46,7 +46,7 @@ export function ProductCard({ product }: { product: Product }) {
       >
         <Share2 size={16} />
       </button>
-      <Link href={`/products/${product.slug}`} className="product-media" aria-label={`${product.name[lang]} ${t('details')}`}>
+      <Link href={`/products/${product.slug}`} prefetch={false} className="product-media" aria-label={`${product.name[lang]} ${t('details')}`}>
         {product.badge && <span className="product-badge">{product.badge[lang]}</span>}
         <Image
           className={`product-img product-img-primary ${hoverImage ? 'has-hover' : ''}`}
@@ -80,7 +80,7 @@ export function ProductCard({ product }: { product: Product }) {
           <span>{getDepartmentLabel(department, lang)}</span>
           <span>{stockLabels[product.stock][lang]}</span>
         </div>
-        <Link href={`/products/${product.slug}`}><h3 className="product-title">{product.name[lang]}</h3></Link>
+        <Link href={`/products/${product.slug}`} prefetch={false}><h3 className="product-title">{product.name[lang]}</h3></Link>
         <div className="product-tags" aria-label="Product filters">
           <span>{getAudienceLabel(primaryAudience, lang)}</span>
           <span>{getProductTypeLabel(product.typeKey, lang)}</span>
@@ -102,7 +102,7 @@ export function ProductCard({ product }: { product: Product }) {
             <AddToCartButton slug={product.slug} label="" className="tiny-btn" />
           </div>
         </div>
-        <Link className="details-link" href={`/products/${product.slug}`}>{t('details')}</Link>
+        <Link className="details-link" href={`/products/${product.slug}`} prefetch={false}>{t('details')}</Link>
       </div>
     </article>
   );

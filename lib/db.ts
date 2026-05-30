@@ -34,6 +34,82 @@ const validAudiences = new Set<AudienceKey>(['cats', 'dogs', 'birds', 'fish', 'h
 const validCollections = new Set<ProductCollectionKey>(['discount', 'popular', 'new']);
 const validStocks = new Set<StockKey>(['inStock', 'lowStock', 'preOrder']);
 
+type PublicProductsRuntimeCache = {
+  expiresAt: number;
+  products: Product[];
+};
+
+type PublicProductRuntimeCache = {
+  expiresAt: number;
+  product?: Product;
+};
+
+const DEFAULT_PUBLIC_PRODUCTS_RUNTIME_CACHE_MS = 30_000;
+let publicProductsRuntimeCache: PublicProductsRuntimeCache | null = null;
+const publicProductBySlugRuntimeCache = new Map<string, PublicProductRuntimeCache>();
+
+function getPublicProductsRuntimeCacheMs() {
+  const configuredTtl = Number(process.env.PUBLIC_PRODUCTS_RUNTIME_CACHE_MS);
+  return Number.isFinite(configuredTtl) && configuredTtl >= 0 ? configuredTtl : DEFAULT_PUBLIC_PRODUCTS_RUNTIME_CACHE_MS;
+}
+
+function getCachedPublicProducts() {
+  const ttl = getPublicProductsRuntimeCacheMs();
+  if (ttl <= 0 || !publicProductsRuntimeCache) return null;
+
+  if (publicProductsRuntimeCache.expiresAt <= Date.now()) {
+    publicProductsRuntimeCache = null;
+    publicProductBySlugRuntimeCache.clear();
+    return null;
+  }
+
+  return publicProductsRuntimeCache.products;
+}
+
+function setCachedPublicProducts(products: Product[]) {
+  const ttl = getPublicProductsRuntimeCacheMs();
+  if (ttl <= 0) return;
+
+  const expiresAt = Date.now() + ttl;
+  publicProductsRuntimeCache = { products, expiresAt };
+  publicProductBySlugRuntimeCache.clear();
+
+  for (const product of products) {
+    publicProductBySlugRuntimeCache.set(product.slug, { product, expiresAt });
+  }
+}
+
+function getCachedPublicProductBySlug(slug: string): { hit: boolean; product?: Product } {
+  const cachedList = getCachedPublicProducts();
+  if (cachedList) {
+    return { hit: true, product: cachedList.find(product => product.slug === slug) };
+  }
+
+  const ttl = getPublicProductsRuntimeCacheMs();
+  const cachedProduct = ttl > 0 ? publicProductBySlugRuntimeCache.get(slug) : undefined;
+
+  if (!cachedProduct) return { hit: false };
+
+  if (cachedProduct.expiresAt <= Date.now()) {
+    publicProductBySlugRuntimeCache.delete(slug);
+    return { hit: false };
+  }
+
+  return { hit: true, product: cachedProduct.product };
+}
+
+function setCachedPublicProductBySlug(slug: string, product?: Product) {
+  const ttl = getPublicProductsRuntimeCacheMs();
+  if (ttl <= 0) return;
+
+  publicProductBySlugRuntimeCache.set(slug, { product, expiresAt: Date.now() + ttl });
+}
+
+export function clearProductRuntimeCache() {
+  publicProductsRuntimeCache = null;
+  publicProductBySlugRuntimeCache.clear();
+}
+
 export function hasDatabaseConfig() {
   return Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
 }
@@ -449,24 +525,33 @@ function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<st
 export async function getProductsFromDb(includeInactive = false) {
   if (!hasDatabaseConfig()) return [];
 
+  if (!includeInactive) {
+    const cachedProducts = getCachedPublicProducts();
+    if (cachedProducts) return cachedProducts;
+  }
+
   const mode = await getProductSchemaMode();
+  let productList: Product[];
 
   if (mode === 'legacy') {
     const result = await getTursoClient().execute('SELECT payload, active FROM products ORDER BY updated_at DESC');
     const dbProducts = result.rows
       .map(row => legacyProductFromRow(row as Record<string, unknown>))
       .filter((product): product is Product => Boolean(product));
-    return includeInactive ? dbProducts : dbProducts.filter(product => product.active !== false);
+    productList = includeInactive ? dbProducts : dbProducts.filter(product => product.active !== false);
+  } else {
+    const result = await getTursoClient().execute('SELECT * FROM products ORDER BY sort_order ASC, updated_at DESC');
+    const rows = result.rows.map(row => row as Record<string, unknown>);
+    const imageIds = rows.map(row => String(row.id || row.slug || '').trim()).filter(Boolean);
+    const imagesMap = await getImagesMap(imageIds);
+    const dbProducts = rows.map(row => wideProductFromRow(row, imagesMap));
+    const normalized = dbProducts.filter(Boolean);
+    productList = includeInactive ? normalized : normalized.filter(product => product.active !== false);
   }
 
-  const result = await getTursoClient().execute('SELECT * FROM products ORDER BY sort_order ASC, updated_at DESC');
-  const rows = result.rows.map(row => row as Record<string, unknown>);
-  const imageIds = rows.map(row => String(row.id || row.slug || '').trim()).filter(Boolean);
-  const imagesMap = await getImagesMap(imageIds);
-  const dbProducts = rows.map(row => wideProductFromRow(row, imagesMap));
-  const normalized = dbProducts.filter(Boolean);
+  if (!includeInactive) setCachedPublicProducts(productList);
 
-  return includeInactive ? normalized : normalized.filter(product => product.active !== false);
+  return productList;
 }
 
 export async function getAllProductsForAdmin() {
@@ -481,6 +566,11 @@ export async function getProductBySlugFromDb(slug: string, includeInactive = tru
     return undefined;
   }
 
+  if (!includeInactive) {
+    const cachedProduct = getCachedPublicProductBySlug(cleanSlug);
+    if (cachedProduct.hit) return cachedProduct.product;
+  }
+
   const mode = await getProductSchemaMode();
 
   if (mode === 'legacy') {
@@ -489,7 +579,9 @@ export async function getProductBySlugFromDb(slug: string, includeInactive = tru
       args: [cleanSlug]
     });
     const product = result.rows[0] ? legacyProductFromRow(result.rows[0] as Record<string, unknown>) ?? undefined : undefined;
-    return includeInactive ? product : (product?.active === false ? undefined : product);
+    const visibleProduct = includeInactive ? product : (product?.active === false ? undefined : product);
+    if (!includeInactive) setCachedPublicProductBySlug(cleanSlug, visibleProduct);
+    return visibleProduct;
   }
 
   const result = await getTursoClient().execute({
@@ -498,13 +590,19 @@ export async function getProductBySlugFromDb(slug: string, includeInactive = tru
   });
 
   const row = result.rows[0] as Record<string, unknown> | undefined;
-  if (!row) return undefined;
+  if (!row) {
+    if (!includeInactive) setCachedPublicProductBySlug(cleanSlug);
+    return undefined;
+  }
 
   const productId = String(row.id || row.slug || '').trim();
   const imagesMap = await getImagesMap(productId ? [productId] : []);
   const product = wideProductFromRow(row, imagesMap);
+  const visibleProduct = includeInactive ? product : (product.active === false ? undefined : product);
 
-  return includeInactive ? product : (product.active === false ? undefined : product);
+  if (!includeInactive) setCachedPublicProductBySlug(cleanSlug, visibleProduct);
+
+  return visibleProduct;
 }
 
 async function upsertLegacyProduct(product: Product) {
@@ -519,6 +617,7 @@ async function upsertLegacyProduct(product: Product) {
             updated_at = CURRENT_TIMESTAMP`,
     args: [normalized.slug, payload, normalized.active === false ? 0 : 1]
   });
+  clearProductRuntimeCache();
   return normalized;
 }
 
@@ -621,6 +720,7 @@ export async function upsertProduct(product: Product) {
     });
   }
 
+  clearProductRuntimeCache();
   return normalized;
 }
 
@@ -632,6 +732,7 @@ export async function setProductActive(slugOrId: string, active: boolean) {
       sql: 'UPDATE products SET active = ?, updated_at = CURRENT_TIMESTAMP WHERE slug = ?',
       args: [active ? 1 : 0, slugOrId]
     });
+    clearProductRuntimeCache();
     return;
   }
 
@@ -639,4 +740,5 @@ export async function setProductActive(slugOrId: string, active: boolean) {
     sql: 'UPDATE products SET active = ?, updated_at = CURRENT_TIMESTAMP WHERE slug = ? OR id = ?',
     args: [active ? 1 : 0, slugOrId, slugOrId]
   });
+  clearProductRuntimeCache();
 }

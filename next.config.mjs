@@ -2,6 +2,11 @@
 const oneYear = 31536000;
 
 const nextConfig = {
+  experimental: {
+    cpus: 1,
+    staticGenerationMaxConcurrency: 1,
+    staticGenerationMinPagesPerWorker: 1
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: oneYear,
@@ -13,16 +18,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/products/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: `public, max-age=${oneYear}, immutable`
-          }
-        ]
-      },
-      {
-        source: '/hero-pets.webp',
+        source: '/hero-pets.png',
         headers: [
           {
             key: 'Cache-Control',

@@ -1,6 +1,10 @@
 import { ProductFilters } from '@/components/ProductFilters';
 import { ProductsIntro } from '@/components/ProductsIntro';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 type ProductSearchParams = {
   audience?: string;
   type?: string;

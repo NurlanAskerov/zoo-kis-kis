@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { type Product } from '@/lib/data';
 
 type CatalogContextValue = {
@@ -26,9 +26,15 @@ export function CatalogProvider({
   const initialVisible = useMemo(() => visibleProducts(initialProducts), [initialProducts]);
   const [products, setProducts] = useState<Product[]>(initialVisible);
   const [loading, setLoading] = useState(initialVisible.length === 0);
+  const productsRef = useRef<Product[]>(initialVisible);
 
-  async function refreshProducts() {
-    if (!products.length) setLoading(true);
+  useEffect(() => {
+    productsRef.current = products;
+  }, [products]);
+
+  const refreshProducts = useCallback(async () => {
+    if (!productsRef.current.length) setLoading(true);
+
     try {
       const response = await fetch('/api/products', { cache: 'no-store' });
       if (!response.ok) {
@@ -38,27 +44,29 @@ export function CatalogProvider({
 
       const data = await response.json() as { products?: Product[] };
       if (Array.isArray(data.products)) {
-        setProducts(visibleProducts(data.products));
+        const nextProducts = visibleProducts(data.products);
+        productsRef.current = nextProducts;
+        setProducts(nextProducts);
       }
     } catch {
       setProducts(current => current);
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     if (!initialVisible.length) {
-      refreshProducts();
+      void refreshProducts();
     }
-  }, [initialVisible.length]);
+  }, [initialVisible.length, refreshProducts]);
 
   const value = useMemo(() => ({
     products,
     loading,
     refreshProducts,
     findProduct: (slug: string) => products.find(product => product.slug === slug)
-  }), [products, loading]);
+  }), [products, loading, refreshProducts]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 }

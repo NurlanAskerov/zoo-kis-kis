@@ -3949,3 +3949,103 @@ textarea,
   opacity: 0;
   transform: scale(1.03);
 }
+
+/* v45: Vercel-friendly carousel controls and mobile vertical scroll fix */
+.collection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.carousel-top-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.carousel-top-arrow {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(227, 237, 201, .9);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 253, 240, .92);
+  color: var(--green-deep);
+  box-shadow: 0 14px 34px rgba(72, 117, 34, .14);
+  cursor: pointer;
+  transition: transform .2s ease, background .2s ease, border-color .2s ease;
+}
+
+.carousel-top-arrow:hover {
+  transform: translateY(-1px);
+  background: #fff;
+  border-color: rgba(84, 169, 56, .38);
+}
+
+@media (max-width: 980px) {
+  .carousel-top-controls {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .collection-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .collection-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .marquee,
+  .marquee-track,
+  .marquee-card,
+  .marquee-card .product-card,
+  .marquee-card .product-card *,
+  .marquee-card .product-media,
+  .marquee-card .product-media * {
+    touch-action: pan-x pan-y !important;
+  }
+
+  .marquee {
+    overscroll-behavior-inline: auto;
+    overscroll-behavior-y: auto;
+  }
+}
+
+/* v46: native carousel scrolling and page scroll from product cards on touch screens */
+.marquee {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+@media (max-width: 980px), (hover: none) and (pointer: coarse) {
+  .carousel-section {
+    overflow: visible;
+  }
+
+  .marquee {
+    touch-action: auto !important;
+    overscroll-behavior: auto;
+    overscroll-behavior-inline: auto;
+    overscroll-behavior-y: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .marquee-track,
+  .marquee-card,
+  .marquee-card .product-card,
+  .marquee-card .product-card *,
+  .marquee-card .product-media,
+  .marquee-card .product-media * {
+    touch-action: auto !important;
+  }
+}

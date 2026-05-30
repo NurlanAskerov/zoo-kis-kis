@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
+import { applyNoStoreHeaders } from '@/lib/http-cache';
 import { isAdminRequest } from '@/lib/admin-auth';
 import { createR2ImageKey, getR2ConfigStatus, hasR2Config, uploadImageBufferToR2 } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return applyNoStoreHeaders(NextResponse.json(body, init));
+}
 
 async function isAuthorized(request: Request) {
   const auth = request.headers.get('authorization') || '';
@@ -16,11 +23,11 @@ async function isAuthorized(request: Request) {
 
 export async function POST(request: Request) {
   if (!(await isAuthorized(request))) {
-    return NextResponse.json({ ok: false, message: 'İcazə yoxdur' }, { status: 401 });
+    return jsonResponse({ ok: false, message: 'İcazə yoxdur' }, { status: 401 });
   }
 
   if (!hasR2Config()) {
-    return NextResponse.json({
+    return jsonResponse({
       ok: false,
       message: 'R2 env dəyərləri tam deyil',
       config: getR2ConfigStatus()
@@ -32,7 +39,7 @@ export async function POST(request: Request) {
     const file = formData.get('file');
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ ok: false, message: 'Şəkil seçilməyib' }, { status: 400 });
+      return jsonResponse({ ok: false, message: 'Şəkil seçilməyib' }, { status: 400 });
     }
 
     const contentType = file.type || 'image/jpeg';
@@ -40,10 +47,10 @@ export async function POST(request: Request) {
     const key = createR2ImageKey(file.name, contentType);
     const uploaded = await uploadImageBufferToR2({ buffer, key, contentType });
 
-    return NextResponse.json({ ok: true, url: uploaded.url, key: uploaded.key });
+    return jsonResponse({ ok: true, url: uploaded.url, key: uploaded.key });
   } catch (error) {
     console.error('/api/admin/upload error', error);
-    return NextResponse.json({
+    return jsonResponse({
       ok: false,
       message: error instanceof Error ? error.message : 'Şəkil yüklənmədi',
       config: getR2ConfigStatus()
