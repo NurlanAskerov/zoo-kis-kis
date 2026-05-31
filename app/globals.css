@@ -4201,3 +4201,80 @@ textarea,
     width: 100%;
   }
 }
+
+/* v36: tidy admin product actions on mobile */
+@media (max-width: 620px) {
+  .admin-product-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .admin-product-mini {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .admin-product-mini > div {
+    min-width: 0;
+  }
+
+  .admin-product-mini strong,
+  .admin-product-mini span,
+  .admin-product-mini small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-product-row-actions {
+    width: auto;
+    flex: 0 0 auto;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .admin-product-card .switch {
+    justify-self: auto;
+    transform: scale(.92);
+    transform-origin: right center;
+  }
+
+  .admin-page .admin-edit-btn {
+    width: auto !important;
+    height: auto !important;
+    min-height: 34px !important;
+    padding: 7px 10px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+
+  .admin-page .admin-edit-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-product-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-product-row-actions {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
