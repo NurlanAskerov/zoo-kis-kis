@@ -47,7 +47,7 @@ export function Footer() {
             <strong>{t('contact')}</strong>
             <p>{brand.phone}</p>
             <p>{brand.address}</p>
-            <p>{t('workHours')}: 10:00 - 20:00</p>
+            <p>{t('workHours')}: 10:00 - 22:00</p>
           </div>
         </div>
         <div className="copyright">© {new Date().getFullYear()} Zoo Kis-Kis.</div>
