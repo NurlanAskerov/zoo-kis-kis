@@ -742,3 +742,36 @@ export async function setProductActive(slugOrId: string, active: boolean) {
   });
   clearProductRuntimeCache();
 }
+
+
+export async function deleteProduct(slugOrId: string) {
+  if (!hasDatabaseConfig()) return;
+  const clean = String(slugOrId || '').trim();
+  if (!clean) return;
+
+  const mode = await getProductSchemaMode();
+
+  if (mode === 'legacy') {
+    await getTursoClient().execute({
+      sql: 'DELETE FROM products WHERE slug = ?',
+      args: [clean]
+    });
+    clearProductRuntimeCache();
+    return;
+  }
+
+  const lookup = await getTursoClient().execute({
+    sql: 'SELECT id FROM products WHERE slug = ? OR id = ? LIMIT 1',
+    args: [clean, clean]
+  });
+  const productId = lookup.rows[0] ? String((lookup.rows[0] as Record<string, unknown>).id || clean) : clean;
+
+  await getTursoClient().execute({ sql: 'DELETE FROM product_images WHERE product_id = ?', args: [productId] });
+  await getTursoClient().execute({ sql: 'DELETE FROM product_tags WHERE product_id = ?', args: [productId] });
+  await getTursoClient().execute({
+    sql: 'DELETE FROM products WHERE slug = ? OR id = ?',
+    args: [clean, clean]
+  });
+
+  clearProductRuntimeCache();
+}

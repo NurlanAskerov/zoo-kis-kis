@@ -386,6 +386,21 @@ function productMatchesSearch(product: Product, query: string) {
   return haystack.includes(needle);
 }
 
+function makeUniqueSlug(baseSlug: string, products: Product[]) {
+  const cleanBase = slugify(baseSlug || 'product');
+  const usedSlugs = new Set(products.map(product => product.slug).filter(Boolean));
+  const usedIds = new Set(products.map(product => product.id).filter(Boolean));
+
+  if (!usedSlugs.has(cleanBase) && !usedIds.has(cleanBase)) return cleanBase;
+
+  let counter = 2;
+  while (usedSlugs.has(`${cleanBase}-${counter}`) || usedIds.has(`${cleanBase}-${counter}`)) {
+    counter += 1;
+  }
+
+  return `${cleanBase}-${counter}`;
+}
+
 export default function AdminPage() {
   const { t, lang } = useLanguage();
   const { products, refreshProducts } = useCatalog();
@@ -402,6 +417,7 @@ export default function AdminPage() {
   const [adminSearch, setAdminSearch] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [togglePendingSlugs, setTogglePendingSlugs] = useState<Set<string>>(() => new Set());
+  const [deletePendingSlugs, setDeletePendingSlugs] = useState<Set<string>>(() => new Set());
   const selectedDepartment = getDepartmentForProductType(form.typeKey);
   const adminSubcategoryOptions = getSubcategoryOptionsForDepartment(selectedDepartment);
   const searchedProducts = useMemo(() => adminProducts.filter(product => productMatchesSearch(product, adminSearch)), [adminProducts, adminSearch]);
@@ -594,6 +610,12 @@ export default function AdminPage() {
     setMessage('');
     const product = formToProduct(form, editingProduct);
 
+    if (!editingProduct) {
+      const uniqueSlug = makeUniqueSlug(product.slug, adminProducts);
+      product.slug = uniqueSlug;
+      product.id = uniqueSlug;
+    }
+
     try {
       const response = await fetch('/api/products', {
         method: 'POST',
@@ -659,14 +681,58 @@ export default function AdminPage() {
   }
 
 
+  async function deleteAdminProduct(product: Product) {
+    const slug = product.slug;
+    if (deletePendingSlugs.has(slug)) return;
+
+    const confirmed = window.confirm(`“${product.name.az}” məhsulu tam silinsin? Bu əməliyyat geri qaytarılmır.`);
+    if (!confirmed) return;
+
+    setDeletePendingSlugs(current => new Set(current).add(slug));
+    setMessage('');
+    const previousProducts = adminProducts;
+    setAdminProducts(current => current.filter(item => item.slug !== slug));
+
+    if (editingProduct?.slug === slug) {
+      setEditingProduct(null);
+      setForm(initialForm);
+      setImageSlots(initialImageSlots());
+      setAdminTab('active');
+    }
+
+    try {
+      const response = await fetch(`/api/products/${slug}`, { method: 'DELETE' });
+      const data = await response.json().catch(() => ({})) as { ok?: boolean; message?: string };
+
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.message || 'Məhsul silinmədi.');
+      }
+
+      setMessage('Məhsul silindi.');
+      void refreshProducts();
+      void loadAdminProducts();
+    } catch (error) {
+      setAdminProducts(previousProducts);
+      setMessage(error instanceof Error ? error.message : 'Məhsul silinmədi. Yenidən yoxlayın.');
+    } finally {
+      setDeletePendingSlugs(current => {
+        const next = new Set(current);
+        next.delete(slug);
+        return next;
+      });
+    }
+  }
+
+
   function renderProductList(list: Product[], emptyText: string) {
     return list.length ? (
       <div className="admin-product-cards">
         {list.map(product => {
           const pending = togglePendingSlugs.has(product.slug);
+          const deleting = deletePendingSlugs.has(product.slug);
 
           return (
-            <div className="admin-product-card" key={product.slug}>
+            <div className={deleting ? 'admin-product-card deleting' : 'admin-product-card'} key={product.slug}>
               <div className="admin-product-mini">
                 <img src={(product.images?.[0] || product.image)} alt={product.name[lang]} draggable={false} />
                 <div>
@@ -676,10 +742,13 @@ export default function AdminPage() {
                 </div>
               </div>
               <div className="admin-product-row-actions">
-                <button className="tiny-btn admin-edit-btn" type="button" onClick={() => startEditProduct(product)}>
+                <button className="tiny-btn admin-edit-btn" type="button" onClick={() => startEditProduct(product)} disabled={deleting}>
                   <Pencil size={15} /> Redaktə et
                 </button>
-                <button className={`switch ${product.active === false ? '' : 'on'} ${pending ? 'pending' : ''}`} type="button" onClick={() => toggleActive(product)} aria-label="active toggle" disabled={pending}>
+                <button className="tiny-btn admin-delete-btn" type="button" onClick={() => deleteAdminProduct(product)} disabled={deleting} aria-label="Məhsulu sil">
+                  {deleting ? <Loader2 size={15} className="spin" /> : <Trash2 size={15} />} Sil
+                </button>
+                <button className={`switch ${product.active === false ? '' : 'on'} ${pending ? 'pending' : ''}`} type="button" onClick={() => toggleActive(product)} aria-label="active toggle" disabled={pending || deleting}>
                   <span />
                 </button>
               </div>

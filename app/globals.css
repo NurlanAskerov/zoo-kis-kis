@@ -4278,3 +4278,81 @@ textarea,
     align-items: center;
   }
 }
+
+/* v37: admin product create/delete fixes */
+.admin-product-card.deleting {
+  opacity: .62;
+  pointer-events: none;
+}
+
+.admin-delete-btn {
+  min-height: 40px;
+  padding-inline: 13px;
+  color: #c93c2b;
+  border-color: #ffd6d0;
+  background: #fff7f5;
+}
+
+.admin-delete-btn:hover {
+  color: #a72f22;
+  background: #ffe5df;
+  border-color: #ffc4bb;
+}
+
+@media (max-width: 620px) {
+  .admin-product-row-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .admin-page .admin-edit-btn,
+  .admin-page .admin-delete-btn {
+    width: auto !important;
+    height: auto !important;
+    min-height: 34px !important;
+    padding: 7px 9px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+
+  .admin-page .admin-delete-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+    flex: 0 0 auto;
+  }
+
+  .admin-product-card .switch {
+    margin-left: 2px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-product-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-product-row-actions {
+    width: 100%;
+    grid-template-columns: 1fr 1fr auto;
+  }
+}
+
+@media (max-width: 340px) {
+  .admin-product-row-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-product-card .switch {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}
