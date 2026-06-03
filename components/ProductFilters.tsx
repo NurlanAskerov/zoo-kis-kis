@@ -34,6 +34,43 @@ const validSubcategory = (value?: string): FilterValue<ProductTypeKey> => produc
 const validDepartment = (value?: string): FilterValue<ProductDepartmentKey> => productDepartmentOptions.some(item => item.key === value) ? value as ProductDepartmentKey : 'all';
 const validCollection = (value?: string): FilterValue<ProductCollectionKey> => collectionOptions.some(item => item.key === value) ? value as ProductCollectionKey : 'all';
 
+const normalizeSearchText = (value: string) => value
+  .toLocaleLowerCase('az-AZ')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[əә]/g, 'e')
+  .replace(/[ıİ]/g, 'i')
+  .replace(/[ö]/g, 'o')
+  .replace(/[ü]/g, 'u')
+  .replace(/[ğ]/g, 'g')
+  .replace(/[ç]/g, 'c')
+  .replace(/[ş]/g, 's')
+  .replace(/[^a-z0-9а-яё\s-]/gi, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const productNameHaystack = (product: { name?: Partial<Record<Lang, string>>; slug?: string }) => {
+  const names = [product.name?.az, product.name?.en, product.name?.ru, product.slug]
+    .filter(Boolean)
+    .join(' ');
+
+  return normalizeSearchText(names);
+};
+
+const matchesProductNameSearch = (product: { name?: Partial<Record<Lang, string>>; slug?: string }, query: string) => {
+  const normalizedQuery = normalizeSearchText(query);
+
+  if (!normalizedQuery) return true;
+
+  const haystack = productNameHaystack(product);
+  const tokens = normalizedQuery.split(' ').filter(Boolean);
+
+  if (!haystack || tokens.length === 0) return true;
+
+  return tokens.every(token => haystack.includes(token));
+};
+
+
 export function ProductFilters({ initialAudience, initialType, initialDepartment, initialCollection }: ProductFiltersProps) {
   const { t, lang } = useLanguage();
   const { products, loading } = useCatalog();
@@ -62,21 +99,18 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
   }, [department, subcategory, subcategoryOptions]);
 
   const filtered = useMemo(() => products.filter(product => {
-    const query = search.trim().toLocaleLowerCase('az-AZ');
-    const name = (product.name?.[lang] || product.name?.az || '').toLocaleLowerCase('az-AZ');
-    const azName = (product.name?.az || '').toLocaleLowerCase('az-AZ');
-    const description = (product.description?.[lang] || product.description?.az || '').toLocaleLowerCase('az-AZ');
+    const query = search.trim();
     const audiences = product.audiences?.length ? product.audiences : ['allPets'];
     const collections = product.collections ?? [];
 
-    const bySearch = !query || name.includes(query) || azName.includes(query) || description.includes(query);
+    const bySearch = matchesProductNameSearch(product, query);
     const byAudience = audience === 'all' || audiences.includes(audience) || audiences.includes('allPets');
     const byDepartment = department === 'all' || getDepartmentForProductType(product.typeKey) === department;
     const bySubcategory = subcategory === 'all' || product.typeKey === subcategory;
     const byCollection = collection === 'all' || collections.includes(collection);
 
     return bySearch && byAudience && byDepartment && bySubcategory && byCollection;
-  }), [products, audience, department, subcategory, collection, search, lang]);
+  }), [products, audience, department, subcategory, collection, search]);
 
   const clear = () => {
     setAudience('all');

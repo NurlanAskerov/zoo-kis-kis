@@ -5602,3 +5602,425 @@ textarea,
     border-color: #2f812d !important;
   }
 }
+
+
+/* v55: tablet layout cleanup + light/dark red accents across pages */
+:root {
+  --accent-red: #e94235;
+  --accent-red-deep: #b92f26;
+  --accent-red-soft: #fff0ee;
+  --accent-red-line: rgba(233, 66, 53, .22);
+}
+
+/* Global red accents without making the design heavy */
+.nav-links a.active,
+.nav-links a:hover {
+  color: var(--accent-red-deep);
+}
+
+.icon-btn.active,
+.icon-btn:hover {
+  border-color: var(--accent-red-line);
+  color: var(--accent-red-deep);
+}
+
+.lang-switch button.active {
+  background: linear-gradient(135deg, var(--green), var(--accent-red));
+  color: #fff;
+}
+
+.section-title .eyebrow,
+.collection-head .eyebrow,
+.page .eyebrow {
+  color: var(--accent-red-deep);
+}
+
+.product-badge,
+.cart-count,
+.favorite-count {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+.product-card:hover {
+  border-color: rgba(233, 66, 53, .18);
+}
+
+.tiny-btn:hover {
+  background: var(--accent-red);
+  border-color: var(--accent-red);
+  color: #fff;
+}
+
+.filter-chip.active,
+.filter-chip:hover {
+  background: linear-gradient(135deg, var(--green), var(--accent-red));
+  color: #fff;
+}
+
+.input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid rgba(233, 66, 53, .18);
+  border-color: rgba(233, 66, 53, .35) !important;
+}
+
+.info-card,
+.category-card,
+.product-card,
+.benefit,
+.delivery-mini-card {
+  box-shadow: 0 18px 46px rgba(47, 103, 23, .07), 0 0 0 1px rgba(233, 66, 53, .025);
+}
+
+.green-block::before,
+.grooming-block::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 88% 16%, rgba(233, 66, 53, .26), transparent 28%);
+  pointer-events: none;
+}
+
+.footer {
+  border-top: 1px solid rgba(233, 66, 53, .16);
+}
+
+/* Desktop dropdown remains white, with red as a small accent only */
+@media (min-width: 981px) {
+  .home-filter-view-all {
+    box-shadow: inset 0 -2px 0 rgba(233, 66, 53, .18);
+  }
+
+  .home-filter-sublink.featured {
+    border-color: rgba(233, 66, 53, .16) !important;
+  }
+}
+
+/* Tablet: hide desktop filter row and use a clean tablet hero layout */
+@media (min-width: 621px) and (max-width: 980px) {
+  .home-filter-menu-section {
+    display: none !important;
+  }
+
+  .hero-image-slider-section {
+    padding-top: 130px !important;
+    padding-bottom: 46px;
+  }
+
+  .hero-image-slider {
+    min-height: 0;
+    border-radius: 28px;
+  }
+
+  .hero-image-track,
+  .hero-image-slide {
+    min-height: 0;
+  }
+
+  .hero-image-desktop-view {
+    display: none !important;
+  }
+
+  .hero-mobile-view {
+    display: grid !important;
+    grid-template-columns: minmax(260px, .9fr) minmax(320px, 1.1fr);
+    align-items: stretch;
+    background: #fff;
+  }
+
+  .hero-mobile-media {
+    height: 100%;
+    min-height: 430px;
+    padding-top: 0;
+    border-radius: 28px 0 0 28px;
+  }
+
+  .hero-mobile-background {
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .hero-mobile-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-top: 0;
+    border-left: 4px solid var(--accent-red);
+    padding: 30px 30px 34px;
+  }
+
+  .hero-mobile-kicker-row {
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hero-mobile-logo {
+    width: 92px;
+  }
+
+  .hero-mobile-panel h1 {
+    font-size: clamp(34px, 5.8vw, 48px);
+    line-height: 1.02;
+  }
+
+  .hero-mobile-panel p {
+    font-size: 16px;
+  }
+
+  .hero-mobile-badges span {
+    width: calc(50% - 6px);
+  }
+
+  .hero-image-controls {
+    position: static;
+    padding: 14px 18px 18px;
+    background: #fff;
+  }
+}
+
+/* Small mobile keeps the filter hidden and leaves breathing room under navbar */
+@media (max-width: 620px) {
+  .home-filter-menu-section {
+    display: none !important;
+  }
+
+  .hero-image-slider-section {
+    padding-top: 122px !important;
+  }
+
+  .hero-mobile-panel {
+    border-top: 4px solid var(--accent-red);
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-image-slider-section {
+    padding-top: 116px !important;
+  }
+}
+
+
+/* v56: stronger red accents for grooming/delivery blocks, language selector and inner pages */
+:root {
+  --brand-red: #e94235;
+  --brand-red-deep: #b92f26;
+  --brand-red-soft: #fff1ef;
+  --brand-red-soft-2: #ffe4df;
+  --brand-red-line: rgba(233, 66, 53, .22);
+}
+
+/* Dil seçimi: qarışıq gradient yox, təmiz qırmızı */
+.lang-switch button.active,
+.language-switcher button.active,
+.language-switch button.active {
+  background: var(--brand-red) !important;
+  border-color: var(--brand-red) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 22px rgba(233, 66, 53, .20) !important;
+}
+
+.lang-switch button:hover,
+.language-switcher button:hover,
+.language-switch button:hover {
+  border-color: var(--brand-red-line) !important;
+  color: var(--brand-red-deep) !important;
+}
+
+/* Grooming yaşıl blokuna qırmızı vurğular */
+.grooming-block,
+.green-block {
+  border: 1px solid rgba(233, 66, 53, .18);
+  box-shadow: 0 24px 64px rgba(47, 103, 23, .12), 0 0 0 1px rgba(233, 66, 53, .05);
+}
+
+.grooming-block::after,
+.green-block::after {
+  content: "";
+  position: absolute;
+  width: 210px;
+  height: 210px;
+  right: -70px;
+  top: -75px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(233, 66, 53, .38) 0%, rgba(233, 66, 53, .16) 44%, transparent 70%);
+  pointer-events: none;
+}
+
+.grooming-block .list-item,
+.green-block .list-item {
+  border-color: rgba(255, 255, 255, .20) !important;
+  box-shadow: inset 4px 0 0 rgba(233, 66, 53, .58);
+}
+
+.grooming-block .list-item svg,
+.green-block .list-item svg {
+  color: #fff !important;
+  filter: drop-shadow(0 2px 0 rgba(233, 66, 53, .30));
+}
+
+.grooming-block .btn-soft,
+.green-block .btn-soft {
+  border-color: rgba(233, 66, 53, .34) !important;
+  color: var(--brand-red-deep) !important;
+  background: #fff !important;
+}
+
+.grooming-block .btn-soft:hover,
+.green-block .btn-soft:hover {
+  background: var(--brand-red) !important;
+  color: #fff !important;
+  border-color: var(--brand-red) !important;
+}
+
+.grooming-block .btn-light-outline,
+.green-block .btn-light-outline {
+  border-color: rgba(255, 255, 255, .45) !important;
+  box-shadow: inset 0 -2px 0 rgba(233, 66, 53, .42);
+}
+
+.grooming-block .btn-light-outline:hover,
+.green-block .btn-light-outline:hover {
+  background: var(--brand-red) !important;
+  border-color: var(--brand-red) !important;
+  color: #fff !important;
+}
+
+/* Çatdırılma kartına qırmızı aksent */
+.delivery-mini-card,
+.info-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.delivery-mini-card::before,
+.info-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--brand-red), var(--brand-red-deep));
+  opacity: .86;
+}
+
+.delivery-mini-card .eyebrow,
+.info-card .eyebrow {
+  color: var(--brand-red-deep) !important;
+}
+
+.delivery-mini-card .list-item svg,
+.info-card .list-item svg {
+  color: var(--brand-red) !important;
+}
+
+.delivery-mini-card .btn-primary,
+.info-card .btn-primary,
+.page .btn-primary {
+  background: var(--brand-red) !important;
+  color: #fff !important;
+  box-shadow: 0 14px 30px rgba(233, 66, 53, .22) !important;
+}
+
+.delivery-mini-card .btn-primary:hover,
+.info-card .btn-primary:hover,
+.page .btn-primary:hover {
+  background: var(--brand-red-deep) !important;
+  color: #fff !important;
+}
+
+/* Digər səhifələrdə yumşaq qırmızı aksent */
+.page h1,
+.page h2 {
+  text-decoration-color: rgba(233, 66, 53, .24);
+}
+
+.page .section-title::after,
+.collection-head::after {
+  background: linear-gradient(90deg, var(--brand-red), transparent);
+}
+
+.category-card:hover,
+.benefit:hover,
+.product-card:hover,
+.info-card:hover {
+  border-color: rgba(233, 66, 53, .22) !important;
+}
+
+.product-card .price,
+.detail-price,
+.cart-total,
+.total-price {
+  color: var(--brand-red-deep);
+}
+
+.product-actions .tiny-btn:hover,
+.tiny-btn.active {
+  background: var(--brand-red) !important;
+  border-color: var(--brand-red) !important;
+  color: #fff !important;
+}
+
+/* Filter, forma və tablarda açıq qırmızı */
+.filter-chip.active,
+.filter-chip:hover,
+.admin-tab.active,
+.profile-tab.active {
+  background: var(--brand-red) !important;
+  color: #fff !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.search-input:focus {
+  outline: none !important;
+  border-color: rgba(233, 66, 53, .38) !important;
+  box-shadow: 0 0 0 4px rgba(233, 66, 53, .10) !important;
+}
+
+/* Navbar icon hover qırmızı, amma əsas layout saxlanır */
+.icon-btn:hover,
+.icon-btn.active {
+  color: var(--brand-red-deep) !important;
+  border-color: rgba(233, 66, 53, .25) !important;
+}
+
+.nav-links a.active {
+  color: var(--brand-red-deep) !important;
+  background: rgba(233, 66, 53, .08) !important;
+}
+
+/* Hero buttonları tam rəngli qalsın, qarışıq gradient olmasın */
+.hero-image-main-btn,
+.hero-mobile-main-btn {
+  background: #2f812d !important;
+  color: #fff !important;
+}
+
+.hero-image-main-btn:hover,
+.hero-mobile-main-btn:hover {
+  background: var(--brand-red) !important;
+}
+
+.hero-image-second-btn,
+.hero-mobile-second-btn {
+  color: var(--brand-red-deep) !important;
+  border-color: rgba(233, 66, 53, .28) !important;
+}
+
+/* Mobil və planşetdə spacing pozulmasın */
+@media (max-width: 980px) {
+  .grooming-block::after,
+  .green-block::after {
+    width: 160px;
+    height: 160px;
+    right: -58px;
+    top: -58px;
+  }
+
+  .delivery-mini-card::before,
+  .info-card::before {
+    width: 4px;
+  }
+}
