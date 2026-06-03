@@ -84,29 +84,6 @@ export function Header() {
               {t(label)}
             </Link>
           ))}
-          <div className="mobile-nav-shortcuts">
-            <Link
-              className={isActivePath(pathname, '/profile') ? 'active' : ''}
-              href="/profile"
-              onClick={() => setMenuOpen(false)}
-            >
-              {t('profile') || 'Profil'}
-            </Link>
-            <Link
-              className={isActivePath(pathname, '/favorites') ? 'active' : ''}
-              href="/favorites"
-              onClick={() => setMenuOpen(false)}
-            >
-              {t('favorites')}
-            </Link>
-            <Link
-              className={isActivePath(pathname, '/cart') ? 'active' : ''}
-              href="/cart"
-              onClick={() => setMenuOpen(false)}
-            >
-              {t('cart')}
-            </Link>
-          </div>
         </nav>
       </div>
     </header>
