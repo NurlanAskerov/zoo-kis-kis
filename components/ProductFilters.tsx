@@ -13,8 +13,8 @@ import {
   type AudienceKey,
   type ProductCollectionKey,
   type ProductDepartmentKey,
-  type ProductTypeKey
-} from '@/lib/data';
+  type ProductTypeKey,
+  type Lang} from '@/lib/data';
 import { useCatalog } from './CatalogProvider';
 import { ProductCard } from './ProductCard';
 import { useLanguage } from './LanguageProvider';
