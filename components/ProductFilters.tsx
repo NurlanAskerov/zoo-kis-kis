@@ -54,8 +54,8 @@ type SearchableProductName = {
   name?: Partial<Record<Lang, string>>;
 };
 
-const productNameVariants = (product: SearchableProductName) => {
-  const values = [product.name?.az, product.name?.en, product.name?.ru]
+const productNameVariants = (product: SearchableProductName, lang: Lang) => {
+  const values = [product.name?.[lang], product.name?.az]
     .filter((value): value is string => Boolean(value));
 
   return Array.from(new Set(values.map(normalizeSearchText).filter(Boolean)));
@@ -69,13 +69,13 @@ const searchTokenMatchesName = (name: string, token: string) => {
   return words.some(word => word === token || word.startsWith(token) || word.includes(token));
 };
 
-const productSearchScore = (product: SearchableProductName, query: string) => {
+const productSearchScore = (product: SearchableProductName, query: string, lang: Lang) => {
   const normalizedQuery = normalizeSearchText(query);
 
   if (!normalizedQuery) return 0;
 
   const tokens = normalizedQuery.split(' ').filter(Boolean);
-  const names = productNameVariants(product);
+  const names = productNameVariants(product, lang);
 
   if (!tokens.length || !names.length) return -1;
 
@@ -121,15 +121,16 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
 
   const filtered = useMemo(() => {
     const query = search.trim();
+    // Search is name-only: description, category, tags and product type are ignored for search matching.
 
     return products
-      .map(product => ({ product, searchScore: productSearchScore(product, query) }))
+      .map(product => ({ product, searchScore: productSearchScore(product, query, lang) }))
       .filter(({ product, searchScore }) => {
         const audiences = product.audiences?.length ? product.audiences : ['allPets'];
         const collections = product.collections ?? [];
 
         const bySearch = !query || searchScore >= 0;
-        const byAudience = audience === 'all' || audiences.includes(audience) || audiences.includes('allPets');
+        const byAudience = audience === 'all' || audience === 'allPets' || audiences.includes(audience) || audiences.includes('allPets');
         const byDepartment = department === 'all' || getDepartmentForProductType(product.typeKey) === department;
         const bySubcategory = subcategory === 'all' || product.typeKey === subcategory;
         const byCollection = collection === 'all' || collections.includes(collection);
@@ -138,7 +139,7 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
       })
       .sort((a, b) => b.searchScore - a.searchScore)
       .map(({ product }) => product);
-  }, [products, audience, department, subcategory, collection, search]);
+  }, [products, audience, department, subcategory, collection, search, lang]);
 
   const clear = () => {
     setAudience('all');
