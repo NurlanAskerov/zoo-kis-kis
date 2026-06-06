@@ -6627,3 +6627,17 @@ select:focus,
     gap: 5px !important;
   }
 }
+
+
+/* v65: desktop home product carousel links remain clickable */
+@media (hover: hover) and (pointer: fine) {
+  .marquee .product-card a,
+  .marquee .product-card button {
+    pointer-events: auto;
+  }
+
+  .marquee-card .product-card,
+  .marquee-card .product-media {
+    touch-action: auto;
+  }
+}

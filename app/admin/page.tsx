@@ -462,10 +462,10 @@ function productMatchesSearch(product: Product, query: string) {
 
   return productNames.some(name => {
     const words = name.split(' ').filter(Boolean);
-
     return tokens.every(token => words.some(word => word === token || word.startsWith(token) || word.includes(token)));
   });
 }
+
 
 
 function makeUniqueSlug(baseSlug: string, products: Product[]) {
