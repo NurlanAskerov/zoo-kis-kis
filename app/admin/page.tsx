@@ -51,6 +51,45 @@ type ProductForm = {
 type ImageUploadStatus = 'preparing' | 'uploading' | 'uploaded' | 'failed';
 type AdminTab = 'active' | 'add' | 'inactive';
 
+type AdminCustomLocalizedOption = {
+  key: string;
+  label: { az: string; en: string; ru: string };
+};
+
+type AdminCustomSubcategory = AdminCustomLocalizedOption & {
+  departmentKey: string;
+};
+
+type AdminCustomFilters = {
+  departments: AdminCustomLocalizedOption[];
+  subcategories: AdminCustomSubcategory[];
+};
+
+const emptyCustomFilters: AdminCustomFilters = {
+  departments: [],
+  subcategories: []
+};
+
+type AdminFilterForm = {
+  departmentAz: string;
+  departmentEn: string;
+  departmentRu: string;
+  subDepartmentKey: string;
+  subAz: string;
+  subEn: string;
+  subRu: string;
+};
+
+const initialAdminFilterForm: AdminFilterForm = {
+  departmentAz: '',
+  departmentEn: '',
+  departmentRu: '',
+  subDepartmentKey: 'food',
+  subAz: '',
+  subEn: '',
+  subRu: ''
+};
+
 type ImageSlot = {
   id: string;
   name: string;
@@ -113,6 +152,42 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '') || `product-${Date.now()}`;
 }
 
+function slugifyAdminOption(value: string, prefix: string) {
+  const key = slugify(value);
+  return `${prefix}-${key}`.replace(/-+/g, '-');
+}
+
+function localizedFromAdminInputs(az: string, en: string, ru: string) {
+  const cleanAz = az.trim();
+  const fallback = cleanAz || en.trim() || ru.trim();
+
+  return {
+    az: cleanAz || fallback,
+    en: en.trim() || fallback,
+    ru: ru.trim() || fallback
+  };
+}
+
+function loadCustomFilters(): AdminCustomFilters {
+  if (typeof window === 'undefined') return emptyCustomFilters;
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem('zoo-kis-kis-admin-custom-filters') || '{}') as Partial<AdminCustomFilters>;
+    return {
+      departments: Array.isArray(parsed.departments) ? parsed.departments : [],
+      subcategories: Array.isArray(parsed.subcategories) ? parsed.subcategories : []
+    };
+  } catch {
+    return emptyCustomFilters;
+  }
+}
+
+function saveCustomFilters(filters: AdminCustomFilters) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('zoo-kis-kis-admin-custom-filters', JSON.stringify(filters));
+}
+
+
 function categoryKeyFromType(typeKey: ProductTypeKey) {
   const map: Partial<Record<ProductTypeKey, string>> = {
     dryFood: 'dry-food',
@@ -166,7 +241,7 @@ function formToProduct(form: ProductForm, baseProduct?: Product | null): Product
       en: form.nameEn.trim() || nameAz,
       ru: form.nameRu.trim() || nameAz
     },
-    categoryKey: categoryKeyFromType(form.typeKey),
+    categoryKey: form.categoryKey || categoryKeyFromType(form.typeKey),
     typeKey: form.typeKey,
     audiences: form.audiences.length ? form.audiences : ['allPets'],
     collections: form.collections,
@@ -358,16 +433,18 @@ function productToForm(product: Product): ProductForm {
 
 function normalizeSearch(value: string) {
   return value
-    .toLowerCase()
-    .replace(/[ə]/g, 'e')
-    .replace(/[ı]/g, 'i')
+    .toLocaleLowerCase('az-AZ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[əә]/g, 'e')
+    .replace(/[ıİ]/g, 'i')
     .replace(/[ö]/g, 'o')
     .replace(/[ü]/g, 'u')
     .replace(/[ğ]/g, 'g')
     .replace(/[ş]/g, 's')
     .replace(/[ç]/g, 'c')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9а-яё\s-]/gi, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -375,16 +452,21 @@ function productMatchesSearch(product: Product, query: string) {
   const needle = normalizeSearch(query);
   if (!needle) return true;
 
-  const haystack = normalizeSearch([
-    product.name.az,
-    product.name.en,
-    product.name.ru,
-    product.slug,
-    product.price
-  ].join(' '));
+  const tokens = needle.split(' ').filter(Boolean);
+  const productNames = [product.name.az, product.name.en, product.name.ru]
+    .filter(Boolean)
+    .map(normalizeSearch)
+    .filter(Boolean);
 
-  return haystack.includes(needle);
+  if (!tokens.length || !productNames.length) return true;
+
+  return productNames.some(name => {
+    const words = name.split(' ').filter(Boolean);
+
+    return tokens.every(token => words.some(word => word === token || word.startsWith(token) || word.includes(token)));
+  });
 }
+
 
 function makeUniqueSlug(baseSlug: string, products: Product[]) {
   const cleanBase = slugify(baseSlug || 'product');
@@ -418,21 +500,101 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [togglePendingSlugs, setTogglePendingSlugs] = useState<Set<string>>(() => new Set());
   const [deletePendingSlugs, setDeletePendingSlugs] = useState<Set<string>>(() => new Set());
-  const selectedDepartment = getDepartmentForProductType(form.typeKey);
-  const adminSubcategoryOptions = getSubcategoryOptionsForDepartment(selectedDepartment);
+  const [customFilters, setCustomFilters] = useState<AdminCustomFilters>(emptyCustomFilters);
+  const [filterForm, setFilterForm] = useState<AdminFilterForm>(initialAdminFilterForm);
+
+  const adminDepartmentOptions = useMemo(() => [
+    ...productDepartmentOptions.map(department => ({ ...department, key: department.key as string })),
+    ...customFilters.departments.map(department => ({
+      key: department.key,
+      label: department.label,
+      subcategories: customFilters.subcategories
+        .filter(subcategory => subcategory.departmentKey === department.key)
+        .map(subcategory => subcategory.key as ProductTypeKey)
+    }))
+  ], [customFilters]);
+
+  const selectedDepartment = customFilters.subcategories.find(subcategory => subcategory.key === form.typeKey)?.departmentKey
+    || getDepartmentForProductType(form.typeKey);
+
+  const adminSubcategoryOptions = useMemo(() => {
+    const customSubcategories = customFilters.subcategories
+      .filter(subcategory => subcategory.departmentKey === selectedDepartment)
+      .map(subcategory => ({ key: subcategory.key as ProductTypeKey, label: subcategory.label }));
+
+    const staticSubcategories = getSubcategoryOptionsForDepartment(selectedDepartment as ProductDepartmentKey)
+      .filter(type => !customSubcategories.some(custom => custom.key === type.key));
+
+    return [...staticSubcategories, ...customSubcategories];
+  }, [customFilters, selectedDepartment]);
   const searchedProducts = useMemo(() => adminProducts.filter(product => productMatchesSearch(product, adminSearch)), [adminProducts, adminSearch]);
   const activeProducts = useMemo(() => searchedProducts.filter(product => product.active !== false), [searchedProducts]);
   const inactiveProducts = useMemo(() => searchedProducts.filter(product => product.active === false), [searchedProducts]);
   const totalActiveProducts = useMemo(() => adminProducts.filter(product => product.active !== false).length, [adminProducts]);
   const totalInactiveProducts = useMemo(() => adminProducts.filter(product => product.active === false).length, [adminProducts]);
 
-  function changeDepartment(department: ProductDepartmentKey) {
-    const firstSubcategory = getSubcategoryOptionsForDepartment(department)[0]?.key ?? 'dryFood';
-    setForm({ ...form, typeKey: firstSubcategory, categoryKey: categoryKeyFromType(firstSubcategory) });
+  function changeDepartment(department: string) {
+    const customFirstSubcategory = customFilters.subcategories.find(subcategory => subcategory.departmentKey === department)?.key as ProductTypeKey | undefined;
+    const firstSubcategory = getSubcategoryOptionsForDepartment(department as ProductDepartmentKey)[0]?.key ?? customFirstSubcategory ?? 'dryFood';
+    setForm({ ...form, typeKey: firstSubcategory, categoryKey: categoryKeyFromType(firstSubcategory) || department });
+    setFilterForm(current => ({ ...current, subDepartmentKey: department }));
   }
 
   function changeSubcategory(typeKey: ProductTypeKey) {
-    setForm({ ...form, typeKey, categoryKey: categoryKeyFromType(typeKey) });
+    const customSubcategory = customFilters.subcategories.find(subcategory => subcategory.key === typeKey);
+    setForm({ ...form, typeKey, categoryKey: customSubcategory?.departmentKey || categoryKeyFromType(typeKey) });
+  }
+
+  function getAdminDepartmentLabel(departmentKey: string) {
+    return adminDepartmentOptions.find(department => department.key === departmentKey)?.label[lang] || getDepartmentLabel(departmentKey as ProductDepartmentKey, lang);
+  }
+
+  function getAdminProductTypeLabel(typeKey: ProductTypeKey) {
+    return customFilters.subcategories.find(subcategory => subcategory.key === typeKey)?.label[lang] || getProductTypeLabel(typeKey, lang);
+  }
+
+  function addCustomDepartment() {
+    const label = localizedFromAdminInputs(filterForm.departmentAz, filterForm.departmentEn, filterForm.departmentRu);
+    if (!label.az) {
+      setMessage('Bölmə adı AZ/EN/RU sahələrindən ən azı birində yazılmalıdır.');
+      return;
+    }
+
+    const key = slugifyAdminOption(label.az, 'custom-section');
+    const nextFilters = {
+      ...customFilters,
+      departments: customFilters.departments.some(department => department.key === key)
+        ? customFilters.departments
+        : [...customFilters.departments, { key, label }]
+    };
+
+    setCustomFilters(nextFilters);
+    saveCustomFilters(nextFilters);
+    setFilterForm(current => ({ ...current, departmentAz: '', departmentEn: '', departmentRu: '', subDepartmentKey: key }));
+    setMessage('Yeni bölmə əlavə edildi. İndi bu bölməyə alt bölmə əlavə edə bilərsiniz.');
+  }
+
+  function addCustomSubcategory() {
+    const label = localizedFromAdminInputs(filterForm.subAz, filterForm.subEn, filterForm.subRu);
+    if (!label.az) {
+      setMessage('Alt bölmə adı AZ/EN/RU sahələrindən ən azı birində yazılmalıdır.');
+      return;
+    }
+
+    const departmentKey = filterForm.subDepartmentKey || selectedDepartment;
+    const key = slugifyAdminOption(`${departmentKey}-${label.az}`, 'custom-sub');
+    const nextFilters = {
+      ...customFilters,
+      subcategories: customFilters.subcategories.some(subcategory => subcategory.key === key)
+        ? customFilters.subcategories
+        : [...customFilters.subcategories, { key, departmentKey, label }]
+    };
+
+    setCustomFilters(nextFilters);
+    saveCustomFilters(nextFilters);
+    setFilterForm(current => ({ ...current, subAz: '', subEn: '', subRu: '' }));
+    setForm(current => ({ ...current, typeKey: key as ProductTypeKey, categoryKey: departmentKey }));
+    setMessage('Yeni alt bölmə əlavə edildi və məhsul formasında seçildi.');
   }
 
   const previewProduct = useMemo(() => formToProduct(form, editingProduct), [form, editingProduct]);
@@ -460,6 +622,9 @@ export default function AdminPage() {
 
   useEffect(() => {
     checkSession();
+    const storedFilters = loadCustomFilters();
+    setCustomFilters(storedFilters);
+    setFilterForm(current => ({ ...current, subDepartmentKey: storedFilters.departments[0]?.key || current.subDepartmentKey }));
   }, []);
 
   async function login(event: FormEvent) {
@@ -737,7 +902,7 @@ export default function AdminPage() {
                 <img src={(product.images?.[0] || product.image)} alt={product.name[lang]} draggable={false} />
                 <div>
                   <strong>{product.name[lang]}</strong>
-                  <span>{getDepartmentLabel(getDepartmentForProductType(product.typeKey), lang)} · {getProductTypeLabel(product.typeKey, lang)}</span>
+                  <span>{getAdminDepartmentLabel(customFilters.subcategories.find(subcategory => subcategory.key === product.typeKey)?.departmentKey || getDepartmentForProductType(product.typeKey))} · {getAdminProductTypeLabel(product.typeKey)}</span>
                   <small>{stockLabels[product.stock][lang]} · {product.price} AZN</small>
                 </div>
               </div>
@@ -914,13 +1079,41 @@ export default function AdminPage() {
 
                   <div className="form-section-title">{t('filtersAndPrice')}</div>
                   <div className="form-row-2">
-                    <select className="input" value={selectedDepartment} onChange={event => changeDepartment(event.target.value as ProductDepartmentKey)} aria-label={t('department')}>
-                      {productDepartmentOptions.map(department => <option value={department.key} key={department.key}>{department.label[lang]}</option>)}
+                    <select className="input" value={selectedDepartment} onChange={event => changeDepartment(event.target.value)} aria-label={t('department')}>
+                      {adminDepartmentOptions.map(department => <option value={department.key} key={department.key}>{department.label[lang]}</option>)}
                     </select>
                     <select className="input" value={form.typeKey} onChange={event => changeSubcategory(event.target.value as ProductTypeKey)} aria-label={t('subcategory')}>
                       {adminSubcategoryOptions.map(type => <option value={type.key} key={type.key}>{type.label[lang]}</option>)}
                     </select>
                   </div>
+
+                  <details className="admin-custom-filter-box">
+                    <summary>+ Bölmə / alt bölmə əlavə et</summary>
+                    <div className="admin-custom-filter-grid">
+                      <div>
+                        <p className="microcopy"><strong>Yeni bölmə</strong> — adı 3 dildə yazın.</p>
+                        <div className="form-row-3">
+                          <input className="input" value={filterForm.departmentAz} onChange={event => setFilterForm({ ...filterForm, departmentAz: event.target.value })} placeholder="Bölmə AZ" />
+                          <input className="input" value={filterForm.departmentEn} onChange={event => setFilterForm({ ...filterForm, departmentEn: event.target.value })} placeholder="Section EN" />
+                          <input className="input" value={filterForm.departmentRu} onChange={event => setFilterForm({ ...filterForm, departmentRu: event.target.value })} placeholder="Раздел RU" />
+                        </div>
+                        <button className="tiny-btn admin-custom-filter-btn" type="button" onClick={addCustomDepartment}>Bölmə əlavə et</button>
+                      </div>
+
+                      <div>
+                        <p className="microcopy"><strong>Yeni alt bölmə</strong> — hansı bölməyə aid olduğunu seçin.</p>
+                        <select className="input" value={filterForm.subDepartmentKey} onChange={event => setFilterForm({ ...filterForm, subDepartmentKey: event.target.value })}>
+                          {adminDepartmentOptions.map(department => <option value={department.key} key={department.key}>{department.label[lang]}</option>)}
+                        </select>
+                        <div className="form-row-3">
+                          <input className="input" value={filterForm.subAz} onChange={event => setFilterForm({ ...filterForm, subAz: event.target.value })} placeholder="Alt bölmə AZ" />
+                          <input className="input" value={filterForm.subEn} onChange={event => setFilterForm({ ...filterForm, subEn: event.target.value })} placeholder="Subsection EN" />
+                          <input className="input" value={filterForm.subRu} onChange={event => setFilterForm({ ...filterForm, subRu: event.target.value })} placeholder="Подраздел RU" />
+                        </div>
+                        <button className="tiny-btn admin-custom-filter-btn" type="button" onClick={addCustomSubcategory}>Alt bölmə əlavə et</button>
+                      </div>
+                    </div>
+                  </details>
 
                   <div className="check-grid">
                     {audienceOptions.map(audience => (

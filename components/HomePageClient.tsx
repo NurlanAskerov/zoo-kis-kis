@@ -83,7 +83,7 @@ type QuickTab = { key: string; label: string; href: string; children: QuickTabCh
 
 function labelsByLang(lang: Lang) {
   return {
-    quick: lang === 'ru' ? 'Быстрый фильтр' : lang === 'en' ? 'Quick filter' : 'Sürətli filter',
+    quick: lang === 'ru' ? 'Быстрый выбор' : lang === 'en' ? 'Quick filter' : 'Sürətli filter',
     all: lang === 'ru' ? 'Все товары' : lang === 'en' ? 'All products' : 'Bütün məhsullar',
     campaigns: lang === 'ru' ? 'Акции' : lang === 'en' ? 'Campaigns' : 'Kampaniyalar',
     discounted: lang === 'ru' ? 'Скидки' : lang === 'en' ? 'Discounts' : 'Endirimlər',
@@ -94,7 +94,7 @@ function labelsByLang(lang: Lang) {
 
 function quickDropdownLabels(lang: Lang) {
   return {
-    viewAll: lang === 'ru' ? 'Все в разделе' : lang === 'en' ? 'View all in category' : 'Bu bölmədə hamısı',
+    viewAll: lang === 'ru' ? 'Смотреть весь раздел' : lang === 'en' ? 'View all in category' : 'Bu bölmədə hamısı',
     subcategories: lang === 'ru' ? 'Alt bölmələr' : lang === 'en' ? 'Subcategories' : 'Alt bölmələr'
   };
 }
@@ -232,16 +232,16 @@ const heroCopyByLang: Record<Lang, HeroCopy> = {
   ru: {
     store: {
       kicker: 'Магазин Zoo Kis-Kis',
-      title: 'Лучший выбор для вашего любимца.',
-      text: 'Качественные корма, игрушки, товары по уходу и выгодные предложения в одном месте.',
+      title: 'Лучший выбор для вашего питомца.',
+      text: 'Качественные корма, игрушки, товары для ухода и выгодные предложения — в одном месте.',
       primary: 'Смотреть товары',
       secondary: 'Смотреть скидки',
-      badges: ['Качественные корма', 'Игрушки', 'Товары по уходу', 'Хорошие цены']
+      badges: ['Качественные корма', 'Игрушки', 'Товары по уходу', 'Выгодные цены']
     },
     grooming: {
       kicker: 'Профессиональный груминг',
-      title: 'Здоровая шерсть, чистый вид и бережный уход.',
-      text: 'Оставьте заявку на мытьё, сушку, расчёсывание, стрижку, уход за ушами, глазами и лапами.',
+      title: 'Здоровая шерсть, аккуратный вид и бережный уход.',
+      text: 'Оставьте заявку на мытьё, сушку, расчёсывание, стрижку, а также уход за ушами, глазами и лапами.',
       primary: 'Подробнее',
       secondary: 'Смотреть услуги',
       badges: ['Мытьё', 'Сушка', 'Расчёсывание', 'Стрижка', 'Гигиенический уход']
@@ -320,40 +320,63 @@ export function HomePageClient() {
             <div className="hero-image-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
               {slides.map((slide, index) => (
                 <article className={`hero-image-slide hero-image-slide-${slide.variant}`} key={slide.id} aria-hidden={activeSlide !== index}>
-                  <div className="hero-image-desktop-view">
-                    <Image
-                      src={slide.image}
-                      alt={slide.alt}
-                      fill
-                      priority={index === 0}
-                      sizes="(max-width: 768px) 0vw, 1180px"
-                      className="hero-image-background hero-image-background-desktop"
-                    />
-                    <div className="hero-image-overlay" />
-                    <div className="hero-image-content">
-                      <div className="hero-image-logo-row">
-                        <Image src="/logo-transparent.png" alt="Zoo Kis-Kis" width={170} height={108} className="hero-image-logo" />
-                        <span>{slide.copy.kicker}</span>
+                  {slide.variant === 'store' ? (
+                    <div className="hero-image-desktop-view hero-store-desktop-split">
+                      <div className="hero-store-desktop-media">
+                        <Image
+                          src={slide.image}
+                          alt={slide.alt}
+                          fill
+                          priority={index === 0}
+                          sizes="(max-width: 768px) 0vw, 560px"
+                          className="hero-store-desktop-image"
+                        />
                       </div>
-                      <h1>{slide.copy.title}</h1>
-                      <p>{slide.copy.text}</p>
-                      <div className="hero-image-badges">
-                        {slide.copy.badges.map(badge => <span key={badge}>{badge}</span>)}
+                      <div className="hero-image-content hero-store-desktop-content">
+                        <div className="hero-image-logo-row">
+                          <Image src="/logo-transparent.png" alt="Zoo Kis-Kis" width={170} height={108} className="hero-image-logo" />
+                          <span>{slide.copy.kicker}</span>
+                        </div>
+                        <h1>{slide.copy.title}</h1>
+                        <p>{slide.copy.text}</p>
+                        <div className="hero-image-badges">
+                          {slide.copy.badges.map(badge => <span key={badge}>{badge}</span>)}
+                        </div>
+                        <div className="hero-image-actions">
+                          <Link href="/products" className="btn btn-primary hero-image-main-btn">{slide.copy.primary}</Link>
+                          <Link href="/products?collection=discount" className="btn btn-soft hero-image-second-btn">{slide.copy.secondary}</Link>
+                        </div>
                       </div>
-                      <div className="hero-image-actions">
-                        {slide.variant === 'grooming' ? (
+                    </div>
+                  ) : (
+                    <div className="hero-image-desktop-view">
+                      <Image
+                        src={slide.image}
+                        alt={slide.alt}
+                        fill
+                        priority={index === 0}
+                        sizes="(max-width: 768px) 0vw, 1180px"
+                        className="hero-image-background hero-image-background-desktop"
+                      />
+                      <div className="hero-image-overlay" />
+                      <div className="hero-image-content">
+                        <div className="hero-image-logo-row">
+                          <Image src="/logo-transparent.png" alt="Zoo Kis-Kis" width={170} height={108} className="hero-image-logo" />
+                          <span>{slide.copy.kicker}</span>
+                        </div>
+                        <h1>{slide.copy.title}</h1>
+                        <p>{slide.copy.text}</p>
+                        <div className="hero-image-badges">
+                          {slide.copy.badges.map(badge => <span key={badge}>{badge}</span>)}
+                        </div>
+                        <div className="hero-image-actions">
                           <Link href="/grooming" className="btn btn-primary hero-image-main-btn">
                             {slide.copy.primary}
                           </Link>
-                        ) : (
-                          <>
-                            <Link href="/products" className="btn btn-primary hero-image-main-btn">{slide.copy.primary}</Link>
-                            <Link href="/products?collection=discount" className="btn btn-soft hero-image-second-btn">{slide.copy.secondary}</Link>
-                          </>
-                        )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="hero-mobile-view">
                     <div className="hero-mobile-media">

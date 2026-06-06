@@ -6024,3 +6024,371 @@ select:focus,
     width: 4px;
   }
 }
+
+
+
+/* v58: store hero banner fix for tablet + desktop */
+.hero-image-slide-store .hero-mobile-media,
+.hero-image-slide-store .hero-image-desktop-view {
+  background: #f8f7f2;
+}
+
+.hero-image-slide-store .hero-mobile-background {
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+@media (min-width: 621px) and (max-width: 980px) {
+  .hero-image-slide-store .hero-mobile-view {
+    grid-template-columns: minmax(320px, 1fr) minmax(340px, 1.1fr);
+  }
+
+  .hero-image-slide-store .hero-mobile-media {
+    min-height: 460px;
+  }
+
+  .hero-image-slide-store .hero-mobile-background {
+    object-fit: contain;
+    object-position: center bottom;
+  }
+
+  .hero-image-slide-store .hero-mobile-panel {
+    padding: 28px 28px 32px;
+  }
+}
+
+@media (min-width: 981px) {
+  .hero-image-slide-store .hero-image-desktop-view {
+    display: grid;
+    grid-template-columns: minmax(420px, .95fr) minmax(470px, 1.05fr);
+    align-items: stretch;
+  }
+
+  .hero-image-slide-store .hero-image-background-desktop {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 520px;
+    object-fit: contain;
+    object-position: center bottom;
+    display: block;
+    grid-column: 1;
+  }
+
+  .hero-image-slide-store .hero-image-overlay {
+    display: none;
+  }
+
+  .hero-image-slide-store .hero-image-content {
+    grid-column: 2;
+    min-height: 520px;
+    max-width: none;
+    padding: 42px 34px 54px 34px;
+    border-left: 4px solid var(--accent-red);
+  }
+}
+
+@media (max-width: 620px) {
+  .hero-image-slide-store .hero-mobile-media {
+    background: #f8f7f2;
+  }
+
+  .hero-image-slide-store .hero-mobile-background {
+    object-fit: contain;
+    object-position: center center;
+  }
+}
+
+
+/* v59: desktop store hero should show both dog and cat clearly */
+@media (min-width: 981px) {
+  .hero-store-desktop-split {
+    display: grid;
+    grid-template-columns: minmax(430px, 0.95fr) minmax(500px, 1.05fr);
+    align-items: stretch;
+    min-height: 520px;
+    background: #fff;
+  }
+
+  .hero-store-desktop-media {
+    position: relative;
+    min-height: 520px;
+    background: #f7f6f0;
+    overflow: hidden;
+  }
+
+  .hero-store-desktop-image {
+    object-fit: contain;
+    object-position: center center;
+    padding: 14px 10px 14px 18px;
+  }
+
+  .hero-store-desktop-content {
+    min-height: 520px;
+    max-width: none;
+    padding: 40px 40px 54px 34px;
+    border-left: 4px solid var(--accent-red);
+  }
+}
+
+/* keep tablet and mobile image natural */
+@media (min-width: 621px) and (max-width: 980px) {
+  .hero-image-slide-store .hero-mobile-background {
+    object-position: center center;
+  }
+}
+
+@media (max-width: 620px) {
+  .hero-image-slide-store .hero-mobile-background {
+    object-position: center center;
+  }
+}
+
+
+/* v60: tablet category cards should not look blurred */
+@media (min-width: 621px) and (max-width: 980px) {
+  .category-bg,
+  .category-card:hover .category-bg {
+    filter: none !important;
+    transform: scale(1.01) !important;
+  }
+
+  .category-overlay::before {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    opacity: 1 !important;
+    background:
+      linear-gradient(180deg, rgba(255,253,240,.22) 0%, rgba(255,253,240,.05) 45%, rgba(33,55,23,.34) 100%) !important;
+  }
+
+  .category-overlay .pill,
+  .category-title-box {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* v60: small admin inputs for custom section/subsection */
+.admin-custom-filter-box {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(84, 169, 56, .16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.admin-custom-filter-box summary {
+  cursor: pointer;
+  color: var(--green-deep);
+  font-weight: 900;
+}
+
+.admin-custom-filter-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.admin-custom-filter-btn {
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  .admin-custom-filter-box {
+    padding: 12px;
+  }
+}
+
+
+/* v62: final proper store banner placement - wide image, no ugly zoom */
+@media (min-width: 981px) {
+  .hero-store-desktop-split {
+    position: relative !important;
+    display: block !important;
+    min-height: 520px !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  .hero-store-desktop-media {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    min-height: 520px !important;
+    background: #fff !important;
+    overflow: hidden !important;
+  }
+
+  .hero-store-desktop-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+    padding: 0 !important;
+  }
+
+  .hero-store-desktop-split::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      90deg,
+      rgba(255,255,255,.98) 0%,
+      rgba(255,255,255,.93) 31%,
+      rgba(255,255,255,.68) 49%,
+      rgba(255,255,255,.18) 69%,
+      rgba(255,255,255,0) 100%
+    );
+    pointer-events: none;
+  }
+
+  .hero-store-desktop-content {
+    position: relative !important;
+    z-index: 2 !important;
+    min-height: 520px !important;
+    max-width: 590px !important;
+    padding: 44px 0 54px 48px !important;
+    border-left: 0 !important;
+    background: transparent !important;
+  }
+}
+
+@media (min-width: 621px) and (max-width: 980px) {
+  .hero-image-slide-store .hero-mobile-view {
+    position: relative;
+    display: block !important;
+    min-height: 520px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .hero-image-slide-store .hero-mobile-media {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    min-height: 520px;
+    padding-top: 0;
+    border-radius: 28px;
+    background-image: url('/banners/zoo-kis-kis-store.webp');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+
+  .hero-image-slide-store .hero-mobile-background {
+    opacity: 0;
+  }
+
+  .hero-image-slide-store .hero-mobile-view::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      90deg,
+      rgba(255,255,255,.98) 0%,
+      rgba(255,255,255,.92) 36%,
+      rgba(255,255,255,.58) 57%,
+      rgba(255,255,255,.08) 100%
+    );
+    pointer-events: none;
+  }
+
+  .hero-image-slide-store .hero-mobile-panel {
+    position: relative;
+    z-index: 2;
+    width: min(58%, 540px);
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 34px 30px 68px;
+    border-left: 0 !important;
+    border-top: 0 !important;
+    background: transparent;
+  }
+}
+
+@media (max-width: 620px) {
+  .hero-image-slide-store .hero-mobile-background {
+    object-fit: cover;
+    object-position: center center;
+  }
+}
+
+
+/* v63: iPad/tablet category cards use clear mobile style; blur only on desktop hover */
+@media (min-width: 621px) and (max-width: 1180px) {
+  .category-card,
+  .category-card.big,
+  .category-card.big-card,
+  .category-card.normal,
+  .category-card.wide {
+    border-radius: 24px;
+    box-shadow: 0 14px 34px rgba(49, 92, 35, .12);
+  }
+
+  .category-bg,
+  .category-card:hover .category-bg {
+    transform: scale(1) !important;
+    filter: saturate(1.04) contrast(1.02) !important;
+    object-position: center !important;
+  }
+
+  .category-overlay {
+    padding: 16px;
+    justify-content: space-between;
+  }
+
+  .category-overlay::before,
+  .category-card:hover .category-overlay::before {
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background:
+      linear-gradient(180deg, rgba(255,253,240,.22) 0%, rgba(255,253,240,.04) 42%, rgba(33,55,23,.42) 100%) !important;
+  }
+
+  .category-overlay .pill,
+  .category-title-box,
+  .category-card:hover .category-overlay .pill,
+  .category-card:hover .category-title-box {
+    opacity: 1 !important;
+    transform: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .category-overlay .pill {
+    background: rgba(242, 253, 231, .92) !important;
+    border: 1px solid rgba(255,255,255,.86) !important;
+    box-shadow: 0 8px 18px rgba(37, 70, 24, .08) !important;
+    font-size: 12px;
+    padding: 8px 13px;
+  }
+
+  .category-title-box {
+    width: auto;
+    max-width: min(92%, 420px);
+    border-radius: 20px;
+    padding: 13px 15px;
+    background: rgba(255, 253, 240, .92) !important;
+    border: 1px solid rgba(255,255,255,.86) !important;
+    box-shadow: 0 14px 28px rgba(34, 56, 24, .12) !important;
+  }
+
+  .category-title-box h3 {
+    font-size: clamp(20px, 3.4vw, 28px);
+    line-height: 1.08;
+    letter-spacing: -.045em;
+  }
+}
+
+@media (min-width: 1181px) {
+  .category-card:hover .category-overlay::before {
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+}
