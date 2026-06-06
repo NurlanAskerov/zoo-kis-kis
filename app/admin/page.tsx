@@ -258,9 +258,9 @@ function formToProduct(form: ProductForm, baseProduct?: Product | null): Product
       ru: form.descriptionRu.trim() || descriptionAz
     },
     details: {
-      az: ['Admin paneldən əlavə olunub', 'Filter və stok məlumatları seçilib'],
-      en: ['Added from admin panel', 'Filter and stock data selected'],
-      ru: ['Добавлено через админ-панель', 'Фильтры и статус наличия выбраны']
+      az: [],
+      en: [],
+      ru: []
     }
   };
 }
@@ -674,7 +674,7 @@ export default function AdminPage() {
         syncImageForm(next);
         return next;
       });
-      setMessage('Şəkil R2-yə yükləndi. Məhsulu yadda saxlayanda link bazaya yazılacaq.');
+      setMessage('Şəkil yükləndi. Məhsulu yadda saxlayanda link istifadə olunacaq.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Upload alınmadı';
       setImageSlots(current => {
@@ -790,7 +790,7 @@ export default function AdminPage() {
       const data = await response.json().catch(() => ({})) as { ok?: boolean; saved?: boolean; product?: Product; message?: string };
 
       if (!response.ok || data.ok === false) {
-        setMessage(data.message || 'Məhsul saxlanmadı. Admin sessiyasını və .env şifrəsini yoxlayın.');
+        setMessage(data.message || 'Məhsul saxlanmadı. Admin girişini və şifrəni yoxlayın.');
         return;
       }
 
@@ -800,7 +800,7 @@ export default function AdminPage() {
         return [savedProduct, ...withoutOld];
       });
       setEditingProduct(savedProduct);
-      setMessage(data.saved === false ? 'Məhsul preview üçün hazırdır. Turso məlumatları .env-də yazılandan sonra bazaya saxlanacaq.' : editingProduct ? 'Məhsul redaktə edildi və bazaya yazıldı.' : 'Məhsul bazaya saxlandı.');
+      setMessage(data.saved === false ? 'Məhsul saxlanmağa hazırdır.' : editingProduct ? 'Məhsul redaktə edildi.' : 'Məhsul saxlandı.');
       await refreshProducts();
       await loadAdminProducts();
     } catch (error) {

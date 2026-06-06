@@ -375,9 +375,9 @@ export const products: Product[] = [
     stock: 'preOrder',
     description: { az: 'Balıqlar üçün sadə akvarium start dəsti.', en: 'A simple aquarium starter set for fish.', ru: 'Простой стартовый набор для аквариума.' },
     details: {
-      az: ['Balıqlar üçün', 'Start üçün rahat seçim', 'Detallar admin paneldən əlavə oluna bilər'],
-      en: ['For fish', 'Convenient starter choice', 'Details can be added from the admin panel'],
-      ru: ['Для рыб', 'Подходит для старта', 'Комплектацию можно дополнить в магазине']
+      az: ['Balıqlar üçün', 'Start üçün rahat seçim'],
+      en: ['For fish', 'Convenient starter choice'],
+      ru: ['Для рыб', 'Подходит для старта']
     }
   },
   {
