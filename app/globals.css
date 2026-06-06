@@ -6811,3 +6811,87 @@ select:focus,
     touch-action: manipulation !important;
   }
 }
+
+
+/* v69: mobile carousel should not show action buttons from side cards */
+@media (max-width: 620px) {
+  .carousel-section {
+    overflow: hidden !important;
+  }
+
+  .carousel-shell {
+    overflow: hidden !important;
+  }
+
+  .marquee {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    scroll-padding-left: 20px !important;
+    scroll-padding-right: 20px !important;
+  }
+
+  .marquee-track {
+    gap: 18px !important;
+  }
+
+  .marquee-card {
+    width: calc(100vw - 64px) !important;
+    max-width: 390px !important;
+    scroll-snap-align: center !important;
+  }
+
+  .marquee-card .product-card {
+    overflow: hidden !important;
+  }
+
+  /* On mobile the share button on partially visible side cards looks broken.
+     Keep share available on detail page; hide it on carousel cards. */
+  .marquee-card .product-share-btn {
+    display: none !important;
+  }
+
+  .marquee-card .product-actions {
+    z-index: 8;
+  }
+}
+
+@media (min-width: 621px) {
+  .marquee-card .product-share-btn {
+    display: grid;
+  }
+}
+
+
+/* v70: mobile carousel share button visible, tidy and placed at top-left */
+@media (max-width: 620px) {
+  .marquee-card .product-share-btn {
+    display: grid !important;
+    top: 14px !important;
+    left: 14px !important;
+    right: auto !important;
+    width: 42px !important;
+    height: 42px !important;
+    opacity: 1 !important;
+    transform: none !important;
+    z-index: 22 !important;
+    background: rgba(255, 255, 255, .92) !important;
+    border-color: rgba(227, 237, 201, .95) !important;
+    box-shadow: 0 12px 26px rgba(36, 62, 27, .12) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .marquee-card .product-badge {
+    top: 18px !important;
+    left: 64px !important;
+    z-index: 21 !important;
+    max-width: calc(100% - 86px);
+    white-space: nowrap;
+  }
+
+  .marquee-card .product-card {
+    overflow: hidden !important;
+  }
+}
