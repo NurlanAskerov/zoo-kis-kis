@@ -41,7 +41,11 @@ export function ProductCard({ product }: { product: Product }) {
       <button
         className="product-share-btn"
         aria-label={t('shareProduct')}
-        onClick={() => shareProduct(product, lang)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void shareProduct(product, lang);
+        }}
         type="button"
       >
         <Share2 size={16} />
@@ -94,7 +98,11 @@ export function ProductCard({ product }: { product: Product }) {
             <button
               className={`tiny-btn ${liked ? 'tiny-btn-active' : ''}`}
               aria-label={t('favorites')}
-              onClick={() => toggleFavorite(product.slug)}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleFavorite(product.slug);
+              }}
               type="button"
             >
               <Heart size={16} fill={liked ? 'currentColor' : 'none'} />

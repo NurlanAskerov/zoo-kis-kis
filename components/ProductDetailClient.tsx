@@ -44,6 +44,47 @@ function titleFromSlug(slug: string) {
     .trim() || 'Məhsul';
 }
 
+const hiddenProductionDetailPhrases = [
+  'admin paneldən əlavə olunub',
+  'filter və stok məlumatları seçilib',
+  'filter ve stok melumatlari secilib',
+  'filtr və stok məlumatları seçilib',
+  'added from admin panel',
+  'filter and stock data selected',
+  'добавлено через админ-панель',
+  'фильтры и статус наличия выбраны'
+];
+
+function isProductionHiddenDetail(value: string) {
+  const normalized = value
+    .toLocaleLowerCase('az-AZ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[əә]/g, 'e')
+    .replace(/[ıİ]/g, 'i')
+    .replace(/[ö]/g, 'o')
+    .replace(/[ü]/g, 'u')
+    .replace(/[ğ]/g, 'g')
+    .replace(/[ş]/g, 's')
+    .replace(/[ç]/g, 'c')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return hiddenProductionDetailPhrases.some(phrase => normalized.includes(
+    phrase
+      .toLocaleLowerCase('az-AZ')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[əә]/g, 'e')
+      .replace(/[ıİ]/g, 'i')
+      .replace(/[ö]/g, 'o')
+      .replace(/[ü]/g, 'u')
+      .replace(/[ğ]/g, 'g')
+      .replace(/[ş]/g, 's')
+      .replace(/[ç]/g, 'c')
+  ));
+}
+
 export function ProductDetailClient({ product: initialProduct, slug }: { product?: Product; slug: string }) {
   const { t, lang } = useLanguage();
   const { findProduct, loading: catalogLoading } = useCatalog();
@@ -139,7 +180,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   const liked = isFavorite(product.slug);
   const displayImage = selectedImage || product.image || '/products/cat-food.svg';
   const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(product, lang, profile));
-  const productDetails = product.details?.[lang]?.length ? product.details[lang] : [];
+  const productDetails = (product.details?.[lang]?.length ? product.details[lang] : []).filter(item => !isProductionHiddenDetail(item));
   const productAudiences: AudienceKey[] = product.audiences?.length ? product.audiences : ['allPets'];
   const productTitle = product.name?.[lang] || product.name?.az || titleFromSlug(slug);
   const productDescription = product.description?.[lang] || product.description?.az || '';

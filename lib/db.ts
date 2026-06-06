@@ -34,6 +34,47 @@ const validAudiences = new Set<AudienceKey>(['cats', 'dogs', 'birds', 'fish', 'h
 const validCollections = new Set<ProductCollectionKey>(['discount', 'popular', 'new']);
 const validStocks = new Set<StockKey>(['inStock', 'lowStock', 'preOrder']);
 
+const hiddenProductionDetailPhrases = [
+  'admin paneldən əlavə olunub',
+  'filter və stok məlumatları seçilib',
+  'filter ve stok melumatlari secilib',
+  'filtr və stok məlumatları seçilib',
+  'added from admin panel',
+  'filter and stock data selected',
+  'добавлено через админ-панель',
+  'фильтры и статус наличия выбраны'
+];
+
+function normalizeHiddenDetail(value: string) {
+  return value
+    .toLocaleLowerCase('az-AZ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[əә]/g, 'e')
+    .replace(/[ıİ]/g, 'i')
+    .replace(/[ö]/g, 'o')
+    .replace(/[ü]/g, 'u')
+    .replace(/[ğ]/g, 'g')
+    .replace(/[ş]/g, 's')
+    .replace(/[ç]/g, 'c')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanProductDetails(details?: Partial<Record<Lang, string[]>>) {
+  return langs.reduce((acc, lang) => {
+    const items = Array.isArray(details?.[lang]) ? details[lang] : [];
+    acc[lang] = items
+      .map(item => String(item || '').trim())
+      .filter(Boolean)
+      .filter(item => {
+        const normalized = normalizeHiddenDetail(item);
+        return !hiddenProductionDetailPhrases.some(phrase => normalized.includes(normalizeHiddenDetail(phrase)));
+      });
+    return acc;
+  }, {} as Record<Lang, string[]>);
+}
+
 type PublicProductsRuntimeCache = {
   expiresAt: number;
   products: Product[];
@@ -443,7 +484,7 @@ export function normalizeProduct(input: Partial<Product>): Product {
     badge: input.badge,
     stock: input.stock || 'inStock',
     description: input.description ?? { az: '', en: '', ru: '' },
-    details: input.details ?? { az: [], en: [], ru: [] },
+    details: cleanProductDetails(input.details),
     active: input.active !== false
   };
 }

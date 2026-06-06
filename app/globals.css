@@ -6782,3 +6782,32 @@ select:focus,
     max-width: none !important;
   }
 }
+
+
+/* v68: desktop product-card action buttons must stay clickable inside carousel */
+.product-card .product-share-btn,
+.product-card .product-actions,
+.product-card .product-actions .tiny-btn,
+.product-card .details-link {
+  position: relative;
+  z-index: 20;
+  pointer-events: auto !important;
+}
+
+.product-card .product-media,
+.product-card .product-body a,
+.product-card .product-body button {
+  pointer-events: auto !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .marquee-card .product-card button,
+  .marquee-card .product-card a {
+    pointer-events: auto !important;
+  }
+
+  .marquee-card .product-card .product-actions,
+  .marquee-card .product-card .product-share-btn {
+    touch-action: manipulation !important;
+  }
+}
