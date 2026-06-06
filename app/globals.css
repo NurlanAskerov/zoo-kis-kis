@@ -6895,3 +6895,84 @@ select:focus,
     overflow: hidden !important;
   }
 }
+
+
+/* v71: product share button tidy on desktop and mobile - top-right */
+.product-card .product-share-btn {
+  top: 14px !important;
+  right: 14px !important;
+  left: auto !important;
+  width: 42px !important;
+  height: 42px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .94) !important;
+  border: 1px solid rgba(227, 237, 201, .95) !important;
+  color: var(--green-deep) !important;
+  box-shadow: 0 12px 28px rgba(36, 62, 27, .13) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 30 !important;
+  pointer-events: auto !important;
+}
+
+.product-card .product-share-btn:hover {
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+}
+
+.product-card .product-badge {
+  left: 14px !important;
+  right: auto !important;
+  top: 14px !important;
+  max-width: calc(100% - 78px);
+  z-index: 24 !important;
+  white-space: nowrap;
+}
+
+/* desktop: keep the card clean, show share on hover/focus */
+@media (hover: hover) and (pointer: fine) {
+  .product-card .product-share-btn {
+    opacity: 0 !important;
+    transform: translateY(-6px) !important;
+  }
+
+  .product-card:hover .product-share-btn,
+  .product-card .product-share-btn:focus-visible {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+  }
+
+  .marquee-card .product-card .product-share-btn {
+    right: 14px !important;
+    left: auto !important;
+  }
+}
+
+/* mobile: share is always visible in the top-right corner */
+@media (max-width: 620px) {
+  .marquee-card .product-share-btn,
+  .product-card .product-share-btn {
+    top: 14px !important;
+    right: 14px !important;
+    left: auto !important;
+    opacity: 1 !important;
+    transform: none !important;
+    display: grid !important;
+  }
+
+  .marquee-card .product-badge,
+  .product-card .product-badge {
+    top: 18px !important;
+    left: 14px !important;
+    right: auto !important;
+    max-width: calc(100% - 76px);
+  }
+
+  .marquee-card .product-card {
+    overflow: hidden !important;
+  }
+}
