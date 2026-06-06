@@ -134,14 +134,14 @@ export const collectionOptions: { key: ProductCollectionKey; label: LocalizedTex
 export const stockLabels: Record<StockKey, LocalizedText> = {
   inStock: { az: 'Stokda var', en: 'In stock', ru: 'В наличии' },
   lowStock: { az: 'Az qalıb', en: 'Low stock', ru: 'Мало осталось' },
-  preOrder: { az: 'Sifarişlə', en: 'By order', ru: 'Под заказ' }
+  preOrder: { az: 'Sifarişlə', en: 'By order', ru: 'На заказ' }
 };
 
 export const categories: Category[] = [
   { key: 'dry-food', icon: '🥣', name: { az: 'Quru yemlər', en: 'Dry food', ru: 'Сухой корм' }, description: { az: 'Pişik, it və digər dostlar üçün quru yemlər', en: 'Dry food for cats, dogs and other pets', ru: 'Сухой корм для кошек, собак и других питомцев' } },
   { key: 'wet-food', icon: '🥫', name: { az: 'Yaş yemlər', en: 'Wet food', ru: 'Влажный корм' }, description: { az: 'Konserv və paket yaş yem seçimləri', en: 'Canned and pouch wet food options', ru: 'Консервы и паучи с влажным кормом' } },
-  { key: 'treats', icon: '🦴', name: { az: 'Ödül mamaları', en: 'Treats', ru: 'Лакомства' }, description: { az: 'Təlim və sevindirmək üçün dadlı seçimlər', en: 'Tasty choices for training and rewards', ru: 'Вкусные лакомства для дрессировки и поощрения' } },
-  { key: 'toys', icon: '🎾', name: { az: 'Oyuncaqlar', en: 'Toys', ru: 'Игрушки' }, description: { az: 'Rahat və əyləncəli oyun məhsulları', en: 'Simple and fun play products', ru: 'Безопасные и увлекательные товары для игр' } },
+  { key: 'treats', icon: '🦴', name: { az: 'Ödül mamaları', en: 'Treats', ru: 'Лакомства' }, description: { az: 'Təlim və sevindirmək üçün dadlı seçimlər', en: 'Tasty choices for training and rewards', ru: 'Лакомства для дрессировки и поощрения' } },
+  { key: 'toys', icon: '🎾', name: { az: 'Oyuncaqlar', en: 'Toys', ru: 'Игрушки' }, description: { az: 'Rahat və əyləncəli oyun məhsulları', en: 'Simple and fun play products', ru: 'Безопасные игрушки для активных игр' } },
   { key: 'bowls', icon: '🍽️', name: { az: 'Yem qabları', en: 'Bowls', ru: 'Миски' }, description: { az: 'Yem və su qabları', en: 'Food and water bowls', ru: 'Миски для корма и воды' } },
   { key: 'toilets', icon: '🚽', name: { az: 'Biotualetlər', en: 'Cat toilets', ru: 'Туалеты для кошек' }, description: { az: 'Pişik tualetləri və aksesuarları', en: 'Cat toilets and accessories', ru: 'Туалеты и аксессуары для кошек' } },
   { key: 'litter', icon: '✨', name: { az: 'Qumlar', en: 'Cat litter', ru: 'Наполнители' }, description: { az: 'Pişik qumu və doldurucular', en: 'Cat litter and fillers', ru: 'Наполнители для кошачьих туалетов' } },
@@ -149,7 +149,7 @@ export const categories: Category[] = [
   { key: 'leashes', icon: '🦮', name: { az: 'Xaltalar', en: 'Leashes and collars', ru: 'Поводки и ошейники' }, description: { az: 'Boyunluq, xalta və gəzinti məhsulları', en: 'Collars, leashes and walking products', ru: 'Ошейники, поводки и товары для прогулок' } },
   { key: 'carriers', icon: '👜', name: { az: 'Çantalar', en: 'Carriers', ru: 'Переноски' }, description: { az: 'Daşıma çantaları', en: 'Pet carriers', ru: 'Сумки-переноски' } },
   { key: 'aquariums', icon: '🐟', name: { az: 'Akvariumlar', en: 'Aquariums', ru: 'Аквариумы' }, description: { az: 'Balıq və akvarium məhsulları', en: 'Fish and aquarium products', ru: 'Товары для рыб и аквариумов' } },
-  { key: 'dog-cages', icon: '🐕', name: { az: 'İt qəfəsləri', en: 'Dog crates', ru: 'Клетки для собак' }, description: { az: 'İtlər üçün ev və səyahət qəfəsləri', en: 'Crates for dogs at home and travel', ru: 'Клетки для собак для дома и поездок' } },
+  { key: 'dog-cages', icon: '🐕', name: { az: 'İt qəfəsləri', en: 'Dog crates', ru: 'Клетки для собак' }, description: { az: 'İtlər üçün ev və səyahət qəfəsləri', en: 'Crates for dogs at home and travel', ru: 'Клетки для собак: для дома и поездок' } },
   { key: 'bird-cages', icon: '🐦', name: { az: 'Quş qəfəsləri', en: 'Bird cages', ru: 'Клетки для птиц' }, description: { az: 'Quşlar üçün qəfəslər', en: 'Cages for birds', ru: 'Клетки для птиц' } },
   { key: 'hamsters', icon: '🐹', name: { az: 'Xomyak məhsulları', en: 'Hamster products', ru: 'Товары для хомяков' }, description: { az: 'Xomyak yemləri və aksesuarları', en: 'Hamster food and accessories', ru: 'Корма и аксессуары для хомяков' } },
   { key: 'care', icon: '🧴', name: { az: 'Baxım', en: 'Care', ru: 'Уход' }, description: { az: 'Qulluq məhsulları', en: 'Care products', ru: 'Товары для ухода' } },
@@ -211,11 +211,11 @@ export const products: Product[] = [
     images: ['/products/toy-balls.svg', '/products/toy-balls-alt.svg', '/products/cat-food-alt.svg'],
     badge: { az: 'Yeni', en: 'New', ru: 'Новинка' },
     stock: 'lowStock',
-    description: { az: 'Pişiklər üçün yumşaq, sadə və əyləncəli oyuncaq toplar.', en: 'Soft, simple and fun toy balls for cats.', ru: 'Мягкие, простые и весёлые мячики для кошек.' },
+    description: { az: 'Pişiklər üçün yumşaq, sadə və əyləncəli oyuncaq toplar.', en: 'Soft, simple and fun toy balls for cats.', ru: 'Мягкие и весёлые мячики для кошек.' },
     details: {
       az: ['Pişiklər üçün oyun məhsulu', 'Ev içi oyunlar üçün rahatdır', 'Pastel və göz yormayan görünüş'],
       en: ['Play product for cats', 'Comfortable for indoor play', 'Soft pastel look'],
-      ru: ['Игрушка для кошек', 'Подходит для домашних игр', 'Спокойные пастельные цвета']
+      ru: ['Игрушка для кошек', 'Подходит для домашних игр', 'Приятные пастельные цвета']
     }
   },
   {
@@ -302,7 +302,7 @@ export const products: Product[] = [
   {
     id: 8,
     slug: 'grooming-baxim-paketi',
-    name: { az: 'Grooming baxım paketi', en: 'Grooming care package', ru: 'Пакет услуг груминга' },
+    name: { az: 'Grooming baxım paketi', en: 'Grooming care package', ru: 'Пакет груминга' },
     categoryKey: 'grooming',
     typeKey: 'grooming',
     audiences: ['cats', 'dogs'],
@@ -316,7 +316,7 @@ export const products: Product[] = [
     details: {
       az: ['Pişik və itlər üçün', 'WhatsApp ilə vaxt razılaşdırılır', 'Qiymət ölçüyə görə dəyişə bilər'],
       en: ['For cats and dogs', 'Appointment is arranged via WhatsApp', 'Price may vary by pet size'],
-      ru: ['Для кошек и собак', 'Время согласовывается в WhatsApp', 'Цена может зависеть от размера питомца']
+      ru: ['Для кошек и собак', 'Время согласовывается через WhatsApp', 'Цена может зависеть от размера питомца']
     }
   },
   {
@@ -332,7 +332,7 @@ export const products: Product[] = [
     images: ['/products/cat-litter.svg', '/products/cat-toilet-alt.svg', '/products/cat-litter-alt.svg'],
     badge: { az: 'Yeni', en: 'New', ru: 'Новинка' },
     stock: 'inStock',
-    description: { az: 'Pişiklər üçün qapalı və səliqəli biotualet modeli.', en: 'A covered and tidy cat toilet model.', ru: 'Закрытая и аккуратная модель туалета для кошек.' },
+    description: { az: 'Pişiklər üçün qapalı və səliqəli biotualet modeli.', en: 'A covered and tidy cat toilet model.', ru: 'Аккуратный закрытый туалет для кошек.' },
     details: {
       az: ['Pişiklər üçün biotualet', 'Evdə səliqəli görünür', 'Qoxu yayılmasını azaltmağa kömək edir'],
       en: ['Cat toilet', 'Looks tidy at home', 'Helps reduce odor spread'],
@@ -377,7 +377,7 @@ export const products: Product[] = [
     details: {
       az: ['Balıqlar üçün', 'Start üçün rahat seçim', 'Detallar admin paneldən əlavə oluna bilər'],
       en: ['For fish', 'Convenient starter choice', 'Details can be added from the admin panel'],
-      ru: ['Для рыб', 'Удобно для старта', 'Детали можно добавить в админ-панели']
+      ru: ['Для рыб', 'Подходит для старта', 'Комплектацию можно дополнить в магазине']
     }
   },
   {
@@ -539,7 +539,7 @@ export const products: Product[] = [
     details: {
       az: ['Balıqlar üçün', 'Gündəlik yem', 'Akvarium məhsulları ilə uyğun'],
       en: ['For fish', 'Daily food', 'Works with aquarium products'],
-      ru: ['Для рыб', 'Ежедневный корм', 'Подходит к товарам для аквариума']
+      ru: ['Для рыб', 'Ежедневный корм', 'Подходит для аквариумного раздела']
     }
   },
   {
@@ -601,7 +601,7 @@ export const deliverySettings = {
 export const groomingServices: Record<Lang, string[]> = {
   az: ['Tük kəsimi', 'Yuma və qurutma', 'Daraq və tükləmə', 'Dırnaq baxımı', 'Gigiyenik baxım', 'Qulluq məsləhəti'],
   en: ['Haircut', 'Washing and drying', 'Brushing and deshedding', 'Nail care', 'Hygiene care', 'Care advice'],
-  ru: ['Стрижка', 'Мытьё и сушка', 'Расчёсывание и вычёсывание шерсти', 'Уход за когтями', 'Гигиенический уход', 'Консультация по уходу']
+  ru: ['Стрижка', 'Мытьё и сушка', 'Расчёсывание и вычёсывание', 'Уход за когтями', 'Гигиенический уход', 'Консультация по уходу']
 };
 
 

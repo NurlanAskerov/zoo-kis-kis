@@ -103,7 +103,7 @@ const badgePresets: Record<BadgePreset, { az: string; en: string; ru: string }> 
   none: { az: '', en: '', ru: '' },
   new: { az: 'Yeni', en: 'New', ru: 'Новинка' },
   discount: { az: 'Endirim', en: 'Sale', ru: 'Скидка' },
-  popular: { az: 'Populyar', en: 'Popular', ru: 'Популярное' },
+  popular: { az: 'Populyar', en: 'Popular', ru: 'Популярный' },
   limited: { az: 'Az qalıb', en: 'Limited', ru: 'Мало осталось' },
   custom: { az: '', en: '', ru: '' }
 };
@@ -260,7 +260,7 @@ function formToProduct(form: ProductForm, baseProduct?: Product | null): Product
     details: {
       az: ['Admin paneldən əlavə olunub', 'Filter və stok məlumatları seçilib'],
       en: ['Added from admin panel', 'Filter and stock data selected'],
-      ru: ['Добавлено из админ-панели', 'Выбраны фильтры и наличие']
+      ru: ['Добавлено через админ-панель', 'Фильтры и статус наличия выбраны']
     }
   };
 }
@@ -1037,10 +1037,10 @@ export default function AdminPage() {
                   <div className="form-section-title">AZ / EN / RU</div>
                   <input className="input" value={form.nameAz} onChange={event => setForm({ ...form, nameAz: event.target.value })} placeholder="Məhsul adı AZ" />
                   <input className="input" value={form.nameEn} onChange={event => setForm({ ...form, nameEn: event.target.value })} placeholder="Product name EN" />
-                  <input className="input" value={form.nameRu} onChange={event => setForm({ ...form, nameRu: event.target.value })} placeholder="Название RU" />
+                  <input className="input" value={form.nameRu} onChange={event => setForm({ ...form, nameRu: event.target.value })} placeholder="Название на RU" />
                   <textarea className="input" value={form.descriptionAz} onChange={event => setForm({ ...form, descriptionAz: event.target.value })} placeholder="Açıqlama AZ" />
                   <textarea className="input" value={form.descriptionEn} onChange={event => setForm({ ...form, descriptionEn: event.target.value })} placeholder="Description EN" />
-                  <textarea className="input" value={form.descriptionRu} onChange={event => setForm({ ...form, descriptionRu: event.target.value })} placeholder="Описание RU" />
+                  <textarea className="input" value={form.descriptionRu} onChange={event => setForm({ ...form, descriptionRu: event.target.value })} placeholder="Описание на RU" />
 
                   <div className="form-section-title">Şəkillər</div>
                   <label className="file-upload-box add-image-box">

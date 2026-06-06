@@ -6392,3 +6392,238 @@ select:focus,
     -webkit-backdrop-filter: blur(2px);
   }
 }
+
+
+/* v64: admin edit/delete buttons and custom section form polish */
+.admin-product-row-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  flex-wrap: nowrap !important;
+  min-width: max-content;
+}
+
+.admin-page .admin-edit-btn,
+.admin-page .admin-delete-btn {
+  width: auto !important;
+  height: auto !important;
+  min-width: 112px !important;
+  min-height: 40px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+  letter-spacing: -.01em;
+}
+
+.admin-page .admin-edit-btn {
+  color: var(--green-deep) !important;
+  border-color: rgba(84, 169, 56, .24) !important;
+  background: #f7fce9 !important;
+}
+
+.admin-page .admin-edit-btn:hover {
+  color: #fff !important;
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+  transform: translateY(-1px);
+}
+
+.admin-page .admin-delete-btn {
+  color: #b92f26 !important;
+  border-color: rgba(233, 66, 53, .22) !important;
+  background: #fff1ef !important;
+}
+
+.admin-page .admin-delete-btn:hover {
+  color: #fff !important;
+  background: #e94235 !important;
+  border-color: #e94235 !important;
+  transform: translateY(-1px);
+}
+
+.admin-page .admin-edit-btn svg,
+.admin-page .admin-delete-btn svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex: 0 0 auto !important;
+}
+
+.admin-product-card .switch {
+  flex: 0 0 auto;
+}
+
+/* Bölmə / alt bölmə əlavə et hissəsi */
+.admin-custom-filter-box {
+  margin-top: 16px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(84, 169, 56, .18) !important;
+  border-radius: 22px !important;
+  background: #fffdf0 !important;
+  box-shadow: 0 14px 34px rgba(49, 92, 35, .08) !important;
+  overflow: hidden;
+}
+
+.admin-custom-filter-box summary {
+  min-height: 54px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--green-deep) !important;
+  font-size: 15px;
+  font-weight: 950 !important;
+  list-style: none;
+  background: linear-gradient(90deg, #f7fce9 0%, #fffdf0 100%);
+}
+
+.admin-custom-filter-box summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-custom-filter-box summary::after {
+  content: "+";
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(84, 169, 56, .18);
+  color: var(--green-deep);
+  font-size: 18px;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(49, 92, 35, .08);
+}
+
+.admin-custom-filter-box[open] summary::after {
+  content: "–";
+}
+
+.admin-custom-filter-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px !important;
+  margin-top: 0 !important;
+  padding: 16px;
+  border-top: 1px solid rgba(84, 169, 56, .12);
+}
+
+.admin-custom-filter-grid > div {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(84, 169, 56, .14);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.admin-custom-filter-grid .microcopy {
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+
+.admin-custom-filter-grid .microcopy strong {
+  color: var(--ink);
+}
+
+.admin-custom-filter-grid .form-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-custom-filter-grid .input {
+  min-width: 0;
+}
+
+.admin-custom-filter-grid select.input {
+  margin-bottom: 10px;
+}
+
+.admin-custom-filter-btn {
+  width: 100% !important;
+  min-height: 42px !important;
+  margin-top: 12px !important;
+  border-radius: 999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--green-deep) !important;
+  background: #f7fce9 !important;
+  border-color: rgba(84, 169, 56, .22) !important;
+  font-weight: 900 !important;
+}
+
+.admin-custom-filter-btn:hover {
+  color: #fff !important;
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+}
+
+/* Mobile/tablet admin actions must not overlap */
+@media (max-width: 760px) {
+  .admin-product-card {
+    grid-template-columns: 1fr !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .admin-product-row-actions {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  .admin-page .admin-edit-btn,
+  .admin-page .admin-delete-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    padding: 0 10px !important;
+    font-size: 12.5px !important;
+  }
+
+  .admin-product-card .switch {
+    grid-column: 1 / -1;
+    justify-self: end;
+    margin-top: 2px;
+    transform: scale(.96);
+    transform-origin: right center;
+  }
+
+  .admin-custom-filter-grid {
+    grid-template-columns: 1fr !important;
+    padding: 12px;
+    gap: 12px !important;
+  }
+
+  .admin-custom-filter-grid .form-row-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-custom-filter-box summary {
+    min-height: 52px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 390px) {
+  .admin-page .admin-edit-btn,
+  .admin-page .admin-delete-btn {
+    font-size: 12px !important;
+    gap: 5px !important;
+  }
+}

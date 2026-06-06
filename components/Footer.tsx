@@ -12,7 +12,7 @@ export function Footer() {
     { href: '/products?type=dryFood', label: { az: 'Quru yemlər', en: 'Dry food', ru: 'Сухой корм' } },
     { href: '/products?type=wetFood', label: { az: 'Yaş yemlər', en: 'Wet food', ru: 'Влажный корм' } },
     { href: '/products?type=toy', label: { az: 'Oyuncaqlar', en: 'Toys', ru: 'Игрушки' } },
-    { href: '/products?type=grooming', label: { az: 'Grooming', en: 'Grooming', ru: 'Груминг' } }
+    { href: '/products?type=grooming', label: { az: 'Grooming', en: 'Grooming', ru: 'Услуги груминга' } }
   ];
 
   return (

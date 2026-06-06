@@ -87,14 +87,14 @@ function labelsByLang(lang: Lang) {
     all: lang === 'ru' ? 'Все товары' : lang === 'en' ? 'All products' : 'Bütün məhsullar',
     campaigns: lang === 'ru' ? 'Акции' : lang === 'en' ? 'Campaigns' : 'Kampaniyalar',
     discounted: lang === 'ru' ? 'Скидки' : lang === 'en' ? 'Discounts' : 'Endirimlər',
-    popular: lang === 'ru' ? 'Популярное' : lang === 'en' ? 'Popular' : 'Populyar',
+    popular: lang === 'ru' ? 'Популярные товары' : lang === 'en' ? 'Popular' : 'Populyar',
     newProducts: lang === 'ru' ? 'Новинки' : lang === 'en' ? 'New arrivals' : 'Yeni məhsullar'
   };
 }
 
 function quickDropdownLabels(lang: Lang) {
   return {
-    viewAll: lang === 'ru' ? 'Смотреть весь раздел' : lang === 'en' ? 'View all in category' : 'Bu bölmədə hamısı',
+    viewAll: lang === 'ru' ? 'Перейти в раздел' : lang === 'en' ? 'View all in category' : 'Bu bölmədə hamısı',
     subcategories: lang === 'ru' ? 'Alt bölmələr' : lang === 'en' ? 'Subcategories' : 'Alt bölmələr'
   };
 }
@@ -233,10 +233,10 @@ const heroCopyByLang: Record<Lang, HeroCopy> = {
     store: {
       kicker: 'Магазин Zoo Kis-Kis',
       title: 'Лучший выбор для вашего питомца.',
-      text: 'Качественные корма, игрушки, товары для ухода и выгодные предложения — в одном месте.',
+      text: 'Качественные корма, игрушки, товары для ухода и выгодные предложения — всё в одном месте.',
       primary: 'Смотреть товары',
-      secondary: 'Смотреть скидки',
-      badges: ['Качественные корма', 'Игрушки', 'Товары по уходу', 'Выгодные цены']
+      secondary: 'Смотреть акции',
+      badges: ['Качественные корма', 'Игрушки', 'Товары по уходу', 'Доступные цены']
     },
     grooming: {
       kicker: 'Профессиональный груминг',
