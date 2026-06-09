@@ -43,6 +43,11 @@ export const ProductCarousel = forwardRef<ProductCarouselHandle, { items: Produc
     }, delay);
   }
 
+
+  function isInteractiveTarget(target: EventTarget | null) {
+    return target instanceof HTMLElement && Boolean(target.closest('a, button, input, textarea, select, label, [role="button"]'));
+  }
+
   function getStep() {
     const marquee = marqueeRef.current;
     if (!marquee) return typeof window === 'undefined' ? 260 : Math.round(window.innerWidth * 0.82);
@@ -86,8 +91,16 @@ export const ProductCarousel = forwardRef<ProductCarouselHandle, { items: Produc
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    pointerDownRef.current = true;
     pauseAutoScroll();
+
+    if (event.pointerType !== 'touch' && isInteractiveTarget(event.target)) {
+      pointerDownRef.current = false;
+      dragStartXRef.current = null;
+      resumeAutoScroll(1200);
+      return;
+    }
+
+    pointerDownRef.current = true;
 
     if (event.pointerType !== 'touch') {
       dragStartXRef.current = event.clientX;
@@ -101,8 +114,10 @@ export const ProductCarousel = forwardRef<ProductCarouselHandle, { items: Produc
     const dragStartX = dragStartXRef.current;
     if (!marquee || dragStartX === null || event.pointerType === 'touch') return;
 
-    event.preventDefault();
     const deltaX = event.clientX - dragStartX;
+    if (Math.abs(deltaX) < 8) return;
+
+    event.preventDefault();
     marquee.scrollLeft = dragStartScrollLeftRef.current - deltaX;
   }
 

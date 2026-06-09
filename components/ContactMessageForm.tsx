@@ -10,7 +10,7 @@ import { useLanguage } from './LanguageProvider';
 const copy = {
   az: { note: 'Mesaj WhatsApp-a hazır formada göndəriləcək.', saved: 'Məlumatlar saxlanıldı.', sendWp: 'WhatsApp ilə göndər' },
   en: { note: 'The message will be sent to WhatsApp in a ready format.', saved: 'Details saved.', sendWp: 'Send via WhatsApp' },
-  ru: { note: 'Сообщение будет готово для отправки в WhatsApp.', saved: 'Данные сохранены.', sendWp: 'Отправить в WhatsApp' }
+  ru: { note: 'Сообщение будет подготовлено для отправки в WhatsApp.', saved: 'Данные сохранены.', sendWp: 'Отправить в WhatsApp' }
 };
 
 export function ContactMessageForm() {

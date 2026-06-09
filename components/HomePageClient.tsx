@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, HeartHandshake, MapPin, PackageCheck, Scissors, ShieldCheck, Sparkles, Truck } from 'lucide-react';
 import {
   audienceOptions,
@@ -71,30 +71,39 @@ function CollectionBlock({ title, collection }: { title: string; collection: Pro
 }
 
 const quickFilterTypes: Record<Exclude<AudienceKey, 'allPets'>, ProductTypeKey[]> = {
-  dogs: ['dryFood', 'wetFood', 'toy', 'leash', 'carrier', 'grooming'],
-  cats: ['dryFood', 'wetFood', 'litter', 'toilet', 'toy', 'carrier'],
-  birds: ['dryFood', 'cage', 'toy'],
+  dogs: ['dryFood', 'wetFood', 'treat', 'leash', 'toy', 'carrier', 'bed', 'grooming'],
+  cats: ['dryFood', 'wetFood', 'treat', 'litter', 'toilet', 'toy', 'carrier', 'bed', 'grooming'],
+  birds: ['dryFood', 'treat', 'cage', 'toy', 'care'],
   fish: ['dryFood', 'aquarium', 'care'],
-  hamsters: ['dryFood', 'cage', 'bed', 'toy']
+  hamsters: ['dryFood', 'treat', 'cage', 'bed', 'toy', 'care']
 };
 
-type QuickTabChild = { key: string; label: string; href: string };
+type QuickTabChild = { key: string; label: string; href: string; featured?: boolean };
 type QuickTab = { key: string; label: string; href: string; children: QuickTabChild[] };
 
 function labelsByLang(lang: Lang) {
   return {
-    quick: lang === 'ru' ? 'Быстрый фильтр' : lang === 'en' ? 'Quick filter' : 'Sürətli filter',
+    quick: lang === 'ru' ? 'Быстрый выбор' : lang === 'en' ? 'Quick filter' : 'Sürətli filter',
     all: lang === 'ru' ? 'Все товары' : lang === 'en' ? 'All products' : 'Bütün məhsullar',
     campaigns: lang === 'ru' ? 'Акции' : lang === 'en' ? 'Campaigns' : 'Kampaniyalar',
     discounted: lang === 'ru' ? 'Скидки' : lang === 'en' ? 'Discounts' : 'Endirimlər',
-    popular: lang === 'ru' ? 'Популярное' : lang === 'en' ? 'Popular' : 'Populyar',
+    popular: lang === 'ru' ? 'Популярные товары' : lang === 'en' ? 'Popular' : 'Populyar',
     newProducts: lang === 'ru' ? 'Новинки' : lang === 'en' ? 'New arrivals' : 'Yeni məhsullar'
   };
 }
 
+function quickDropdownLabels(lang: Lang) {
+  return {
+    viewAll: lang === 'ru' ? 'Перейти в раздел' : lang === 'en' ? 'View all in category' : 'Bu bölmədə hamısı',
+    subcategories: lang === 'ru' ? 'Alt bölmələr' : lang === 'en' ? 'Subcategories' : 'Alt bölmələr'
+  };
+}
+
+
 function QuickFilterMenu() {
   const { lang } = useLanguage();
   const labels = labelsByLang(lang);
+  const dropdownLabels = quickDropdownLabels(lang);
   const tabs = useMemo<QuickTab[]>(() => {
     const petTabs = audienceOptions
       .filter(option => option.key !== 'allPets')
@@ -104,27 +113,28 @@ function QuickFilterMenu() {
           key: audienceKey,
           label: option.label[lang],
           href: `/products?audience=${audienceKey}`,
-          children: quickFilterTypes[audienceKey].map((typeKey: ProductTypeKey) => ({
+          children: quickFilterTypes[audienceKey].map((typeKey: ProductTypeKey, index) => ({
             key: `${audienceKey}-${typeKey}`,
             label: productTypeOptions.find(type => type.key === typeKey)?.label[lang] ?? typeKey,
-            href: `/products?audience=${audienceKey}&type=${typeKey}`
+            href: `/products?audience=${audienceKey}&type=${typeKey}`,
+            featured: index < 3
           }))
         };
       });
 
     return [
-      { key: 'all-products', label: labels.all, href: '/products', children: [] },
-      ...petTabs,
       {
-        key: 'campaigns',
-        label: labels.campaigns,
-        href: '/products?collection=discount',
+        key: 'all-products',
+        label: labels.all,
+        href: '/products',
         children: [
-          { key: 'discount', label: labels.discounted, href: '/products?collection=discount' },
-          { key: 'popular', label: labels.popular, href: '/products?collection=popular' },
-          { key: 'new', label: labels.newProducts, href: '/products?collection=new' }
+          { key: 'all', label: labels.all, href: '/products', featured: true },
+          { key: 'discount', label: labels.discounted, href: '/products?collection=discount', featured: true },
+          { key: 'popular', label: labels.popular, href: '/products?collection=popular', featured: true },
+          { key: 'new', label: labels.newProducts, href: '/products?collection=new', featured: true }
         ]
-      }
+      },
+      ...petTabs
     ];
   }, [lang, labels.all, labels.campaigns, labels.discounted, labels.newProducts, labels.popular]);
 
@@ -133,14 +143,24 @@ function QuickFilterMenu() {
       <div className="container home-filter-menu">
         <div className="home-filter-scroll">
           {tabs.map(tab => (
-            <div className="home-filter-item" key={tab.key}>
+            <div className={`home-filter-item ${tab.children.length ? 'has-dropdown' : ''}`} key={tab.key}>
               <Link className="home-filter-link" href={tab.href}>{tab.label}</Link>
               {tab.children.length ? (
                 <div className="home-filter-dropdown">
-                  <Link className="home-filter-dropdown-title" href={tab.href}>{tab.label}</Link>
+                  <div className="home-filter-dropdown-head">
+                    <Link className="home-filter-dropdown-title" href={tab.href}>{tab.label}</Link>
+                    <Link className="home-filter-view-all" href={tab.href}>{dropdownLabels.viewAll}</Link>
+                  </div>
+                  <span className="home-filter-dropdown-kicker">{dropdownLabels.subcategories}</span>
                   <div className="home-filter-dropdown-grid">
                     {tab.children.map(child => (
-                      <Link className="home-filter-sublink" href={child.href} key={child.key}>{child.label}</Link>
+                      <Link
+                        className={`home-filter-sublink ${child.featured ? 'featured' : ''}`}
+                        href={child.href}
+                        key={child.key}
+                      >
+                        {child.label}
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -186,7 +206,7 @@ const heroCopyByLang: Record<Lang, HeroCopy> = {
       kicker: 'Professional grooming',
       title: 'Sağlam tük, təmiz görünüş və rahat qulluq.',
       text: 'Yuma, fen, daranma, tük kəsimi, qulaq-göz və pəncə baxımı üçün müraciətinizi göndərin.',
-      primary: 'Grooming sifariş et',
+      primary: 'Ətraflı',
       secondary: 'Xidmətlərə bax',
       badges: ['Yuma', 'Fen', 'Daranma', 'Tük kəsimi', 'Gigiyenik qulluq']
     }
@@ -204,7 +224,7 @@ const heroCopyByLang: Record<Lang, HeroCopy> = {
       kicker: 'Professional grooming',
       title: 'Healthy fur, clean look and gentle care.',
       text: 'Send a request for washing, drying, brushing, haircut, ear-eye and paw care.',
-      primary: 'Book grooming',
+      primary: 'Details',
       secondary: 'View services',
       badges: ['Wash', 'Drying', 'Brushing', 'Haircut', 'Hygiene care']
     }
@@ -212,17 +232,17 @@ const heroCopyByLang: Record<Lang, HeroCopy> = {
   ru: {
     store: {
       kicker: 'Магазин Zoo Kis-Kis',
-      title: 'Лучший выбор для вашего любимца.',
-      text: 'Качественные корма, игрушки, товары по уходу и выгодные предложения в одном месте.',
+      title: 'Лучший выбор для вашего питомца.',
+      text: 'Качественные корма, игрушки, товары для ухода и выгодные предложения — всё в одном месте.',
       primary: 'Смотреть товары',
-      secondary: 'Смотреть скидки',
-      badges: ['Качественные корма', 'Игрушки', 'Товары по уходу', 'Хорошие цены']
+      secondary: 'Смотреть акции',
+      badges: ['Качественные корма', 'Игрушки', 'Товары по уходу', 'Доступные цены']
     },
     grooming: {
       kicker: 'Профессиональный груминг',
-      title: 'Здоровая шерсть, чистый вид и бережный уход.',
-      text: 'Оставьте заявку на мытьё, сушку, расчёсывание, стрижку, уход за ушами, глазами и лапами.',
-      primary: 'Записаться на груминг',
+      title: 'Здоровая шерсть, аккуратный вид и бережный уход.',
+      text: 'Оставьте заявку на мытьё, сушку, расчёсывание, стрижку, а также уход за ушами, глазами и лапами.',
+      primary: 'Подробнее',
       secondary: 'Смотреть услуги',
       badges: ['Мытьё', 'Сушка', 'Расчёсывание', 'Стрижка', 'Гигиенический уход']
     }
@@ -233,12 +253,15 @@ export function HomePageClient() {
   const { t, lang } = useLanguage();
   const services = groomingServices[lang];
   const [activeSlide, setActiveSlide] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
   const copy = heroCopyByLang[lang];
 
   const slides = [
     {
       id: 'store',
       image: '/banners/zoo-kis-kis-store.webp',
+      mobileImage: '/banners/zoo-kis-kis-store-mobile-generated.png',
       alt: 'Zoo Kis-Kis mağazası banneri',
       variant: 'store' as const,
       copy: copy.store
@@ -246,6 +269,7 @@ export function HomePageClient() {
     {
       id: 'grooming',
       image: '/banners/zoo-kis-kis-grooming.webp',
+      mobileImage: '/banners/zoo-kis-kis-grooming-mobile-generated.png',
       alt: 'Zoo Kis-Kis grooming banneri',
       variant: 'grooming' as const,
       copy: copy.grooming
@@ -263,49 +287,130 @@ export function HomePageClient() {
   const previousSlide = () => setActiveSlide(current => (current - 1 + slides.length) % slides.length);
   const nextSlide = () => setActiveSlide(current => (current + 1) % slides.length);
 
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.changedTouches[0]?.clientX ?? null;
+    touchEndX.current = null;
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    touchEndX.current = event.changedTouches[0]?.clientX ?? null;
+
+    if (touchStartX.current === null || touchEndX.current === null) return;
+
+    const deltaX = touchStartX.current - touchEndX.current;
+    const threshold = 45;
+
+    if (deltaX > threshold) {
+      nextSlide();
+    } else if (deltaX < -threshold) {
+      previousSlide();
+    }
+
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
   return (
     <main>
       <QuickFilterMenu />
 
       <section className="hero hero-image-slider-section">
         <div className="container">
-          <div className="hero-image-slider">
+          <div className="hero-image-slider" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             <div className="hero-image-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
               {slides.map((slide, index) => (
                 <article className={`hero-image-slide hero-image-slide-${slide.variant}`} key={slide.id} aria-hidden={activeSlide !== index}>
-                  <Image
-                    src={slide.image}
-                    alt={slide.alt}
-                    fill
-                    priority={index === 0}
-                    sizes="(max-width: 768px) 100vw, 1180px"
-                    className="hero-image-background"
-                  />
-                  <div className="hero-image-overlay" />
-                  <div className="hero-image-content">
-                    <div className="hero-image-logo-row">
-                      <Image src="/logo-transparent.png" alt="Zoo Kis-Kis" width={170} height={108} className="hero-image-logo" />
-                      <span>{slide.copy.kicker}</span>
-                    </div>
-                    <h1>{slide.copy.title}</h1>
-                    <p>{slide.copy.text}</p>
-                    <div className="hero-image-badges">
-                      {slide.copy.badges.map(badge => <span key={badge}>{badge}</span>)}
-                    </div>
-                    <div className="hero-image-actions">
-                      {slide.variant === 'grooming' ? (
-                        <>
-                          <GroomingRequestButton buttonClassName="btn btn-primary hero-image-main-btn">
-                            {slide.copy.primary}
-                          </GroomingRequestButton>
-                          <Link href="/grooming" className="btn btn-soft hero-image-second-btn">{slide.copy.secondary}</Link>
-                        </>
-                      ) : (
-                        <>
+                  {slide.variant === 'store' ? (
+                    <div className="hero-image-desktop-view hero-store-desktop-split">
+                      <div className="hero-store-desktop-media">
+                        <Image
+                          src={slide.image}
+                          alt={slide.alt}
+                          fill
+                          priority={index === 0}
+                          sizes="(max-width: 768px) 0vw, 560px"
+                          className="hero-store-desktop-image"
+                        />
+                      </div>
+                      <div className="hero-image-content hero-store-desktop-content">
+                        <div className="hero-image-logo-row">
+                          <Image src="/logo-transparent.png" alt="Zoo Kis-Kis" width={170} height={108} className="hero-image-logo" />
+                          <span>{slide.copy.kicker}</span>
+                        </div>
+                        <h1>{slide.copy.title}</h1>
+                        <p>{slide.copy.text}</p>
+                        <div className="hero-image-badges">
+                          {slide.copy.badges.map(badge => <span key={badge}>{badge}</span>)}
+                        </div>
+                        <div className="hero-image-actions">
                           <Link href="/products" className="btn btn-primary hero-image-main-btn">{slide.copy.primary}</Link>
                           <Link href="/products?collection=discount" className="btn btn-soft hero-image-second-btn">{slide.copy.secondary}</Link>
-                        </>
-                      )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="hero-image-desktop-view">
+                      <Image
+                        src={slide.image}
+                        alt={slide.alt}
+                        fill
+                        priority={index === 0}
+                        sizes="(max-width: 768px) 0vw, 1180px"
+                        className="hero-image-background hero-image-background-desktop"
+                      />
+                      <div className="hero-image-overlay" />
+                      <div className="hero-image-content">
+                        <div className="hero-image-logo-row">
+                          <Image src="/logo-transparent.png" alt="Zoo Kis-Kis" width={170} height={108} className="hero-image-logo" />
+                          <span>{slide.copy.kicker}</span>
+                        </div>
+                        <h1>{slide.copy.title}</h1>
+                        <p>{slide.copy.text}</p>
+                        <div className="hero-image-badges">
+                          {slide.copy.badges.map(badge => <span key={badge}>{badge}</span>)}
+                        </div>
+                        <div className="hero-image-actions">
+                          <Link href="/grooming" className="btn btn-primary hero-image-main-btn">
+                            {slide.copy.primary}
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="hero-mobile-view">
+                    <div className="hero-mobile-media">
+                      <Image
+                        src={slide.mobileImage}
+                        alt={slide.alt}
+                        fill
+                        priority={index === 0}
+                        sizes="(max-width: 768px) 100vw, 0vw"
+                        className="hero-mobile-background"
+                      />
+                    </div>
+                    <div className="hero-mobile-panel">
+                      <div className="hero-mobile-kicker-row">
+                        <Image src="/logo-transparent.png" alt="Zoo Kis-Kis" width={124} height={78} className="hero-mobile-logo" />
+                        <span className="hero-mobile-kicker">{slide.copy.kicker}</span>
+                      </div>
+                      <h1>{slide.copy.title}</h1>
+                      <p>{slide.copy.text}</p>
+                      <div className="hero-mobile-badges">
+                        {slide.copy.badges.map(badge => <span key={badge}>{badge}</span>)}
+                      </div>
+                      <div className="hero-mobile-actions">
+                        {slide.variant === 'grooming' ? (
+                          <Link href="/grooming" className="btn btn-primary hero-mobile-main-btn">
+                            {slide.copy.primary}
+                          </Link>
+                        ) : (
+                          <>
+                            <Link href="/products" className="btn btn-primary hero-mobile-main-btn">{slide.copy.primary}</Link>
+                            <Link href="/products?collection=discount" className="btn btn-soft hero-mobile-second-btn">{slide.copy.secondary}</Link>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </article>

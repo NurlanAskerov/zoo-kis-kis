@@ -13,7 +13,8 @@ import {
   type AudienceKey,
   type ProductCollectionKey,
   type ProductDepartmentKey,
-  type ProductTypeKey
+  type ProductTypeKey,
+  type Lang
 } from '@/lib/data';
 import { useCatalog } from './CatalogProvider';
 import { ProductCard } from './ProductCard';
@@ -33,6 +34,63 @@ const validAudience = (value?: string): FilterValue<AudienceKey> => audienceOpti
 const validSubcategory = (value?: string): FilterValue<ProductTypeKey> => productTypeOptions.some(item => item.key === value) ? value as ProductTypeKey : 'all';
 const validDepartment = (value?: string): FilterValue<ProductDepartmentKey> => productDepartmentOptions.some(item => item.key === value) ? value as ProductDepartmentKey : 'all';
 const validCollection = (value?: string): FilterValue<ProductCollectionKey> => collectionOptions.some(item => item.key === value) ? value as ProductCollectionKey : 'all';
+
+const normalizeSearchText = (value: string) => value
+  .toLocaleLowerCase('az-AZ')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[əә]/g, 'e')
+  .replace(/[ıİ]/g, 'i')
+  .replace(/[ö]/g, 'o')
+  .replace(/[ü]/g, 'u')
+  .replace(/[ğ]/g, 'g')
+  .replace(/[ç]/g, 'c')
+  .replace(/[ş]/g, 's')
+  .replace(/[^a-z0-9а-яё\s-]/gi, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+type SearchableProductName = {
+  name?: Partial<Record<Lang, string>>;
+};
+
+const productNameVariants = (product: SearchableProductName, lang: Lang) => {
+  const values = [product.name?.[lang], product.name?.az]
+    .filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(values.map(normalizeSearchText).filter(Boolean)));
+};
+
+const searchTokenMatchesName = (name: string, token: string) => {
+  if (!token) return true;
+
+  const words = name.split(' ').filter(Boolean);
+
+  return words.some(word => word === token || word.startsWith(token) || word.includes(token));
+};
+
+const productSearchScore = (product: SearchableProductName, query: string, lang: Lang) => {
+  const normalizedQuery = normalizeSearchText(query);
+
+  if (!normalizedQuery) return 0;
+
+  const tokens = normalizedQuery.split(' ').filter(Boolean);
+  const names = productNameVariants(product, lang);
+
+  if (!tokens.length || !names.length) return -1;
+
+  const matchedName = names.find(name => tokens.every(token => searchTokenMatchesName(name, token)));
+  if (!matchedName) return -1;
+
+  if (matchedName === normalizedQuery) return 1000;
+  if (matchedName.startsWith(normalizedQuery)) return 900;
+
+  const words = matchedName.split(' ').filter(Boolean);
+  if (tokens.every(token => words.some(word => word.startsWith(token)))) return 800;
+
+  return 500;
+};
+
 
 export function ProductFilters({ initialAudience, initialType, initialDepartment, initialCollection }: ProductFiltersProps) {
   const { t, lang } = useLanguage();
@@ -61,22 +119,27 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
     if (!stillAllowed) setSubcategory('all');
   }, [department, subcategory, subcategoryOptions]);
 
-  const filtered = useMemo(() => products.filter(product => {
-    const query = search.trim().toLocaleLowerCase('az-AZ');
-    const name = (product.name?.[lang] || product.name?.az || '').toLocaleLowerCase('az-AZ');
-    const azName = (product.name?.az || '').toLocaleLowerCase('az-AZ');
-    const description = (product.description?.[lang] || product.description?.az || '').toLocaleLowerCase('az-AZ');
-    const audiences = product.audiences?.length ? product.audiences : ['allPets'];
-    const collections = product.collections ?? [];
+  const filtered = useMemo(() => {
+    const query = search.trim();
+    // Search is name-only: description, category, tags and product type are ignored for search matching.
 
-    const bySearch = !query || name.includes(query) || azName.includes(query) || description.includes(query);
-    const byAudience = audience === 'all' || audiences.includes(audience) || audiences.includes('allPets');
-    const byDepartment = department === 'all' || getDepartmentForProductType(product.typeKey) === department;
-    const bySubcategory = subcategory === 'all' || product.typeKey === subcategory;
-    const byCollection = collection === 'all' || collections.includes(collection);
+    return products
+      .map(product => ({ product, searchScore: productSearchScore(product, query, lang) }))
+      .filter(({ product, searchScore }) => {
+        const audiences = product.audiences?.length ? product.audiences : ['allPets'];
+        const collections = product.collections ?? [];
 
-    return bySearch && byAudience && byDepartment && bySubcategory && byCollection;
-  }), [products, audience, department, subcategory, collection, search, lang]);
+        const bySearch = !query || searchScore >= 0;
+        const byAudience = audience === 'all' || audience === 'allPets' || audiences.includes(audience) || audiences.includes('allPets');
+        const byDepartment = department === 'all' || getDepartmentForProductType(product.typeKey) === department;
+        const bySubcategory = subcategory === 'all' || product.typeKey === subcategory;
+        const byCollection = collection === 'all' || collections.includes(collection);
+
+        return bySearch && byAudience && byDepartment && bySubcategory && byCollection;
+      })
+      .sort((a, b) => b.searchScore - a.searchScore)
+      .map(({ product }) => product);
+  }, [products, audience, department, subcategory, collection, search, lang]);
 
   const clear = () => {
     setAudience('all');
