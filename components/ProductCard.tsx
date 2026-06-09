@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, Share2 } from 'lucide-react';
-import { getAudienceLabel, getDepartmentForProductType, getDepartmentLabel, getProductTypeLabel, stockLabels, type Product } from '@/lib/data';
+import { getAudienceLabel, getDepartmentForProductType, getDepartmentLabel, getProductTypeLabel, stockLabels, type Product, type ProductVariant } from '@/lib/data';
 import { AddToCartButton } from './AddToCartButton';
 import { useCart } from './cart-context';
 import { useLanguage } from './LanguageProvider';
@@ -42,6 +42,16 @@ function formatCardPrice(product: Product, lang: 'az' | 'en' | 'ru') {
   return `${minPrice} AZN-dən`;
 }
 
+function getCardVariants(product: Product) {
+  return (product.variants ?? [])
+    .filter(variant => variant?.label?.az && Number.isFinite(Number(variant.price)) && Number(variant.price) > 0)
+    .slice(0, 5);
+}
+
+function isVariantSelectable(variant: ProductVariant) {
+  return (variant.stock ?? 'inStock') !== 'preOrder';
+}
+
 export function ProductCard({ product }: { product: Product }) {
   const { t, lang } = useLanguage();
   const { toggleFavorite, isFavorite } = useCart();
@@ -50,6 +60,7 @@ export function ProductCard({ product }: { product: Product }) {
   const images = product.images?.length ? product.images : [product.image || '/products/cat-food.svg'];
   const hoverImage = images[1];
   const liked = isFavorite(product.slug);
+  const cardVariants = getCardVariants(product);
   const hasVariants = getVariantPrices(product).length > 0;
   const mainIsData = images[0]?.startsWith('data:') ?? false;
   const hoverIsData = Boolean(hoverImage?.startsWith('data:'));
@@ -82,6 +93,18 @@ export function ProductCard({ product }: { product: Product }) {
           draggable={false}
           loading="lazy"
         />
+        {cardVariants.length ? (
+          <div className="product-card-variant-chips" aria-label="Məhsul ölçüləri">
+            {cardVariants.map(variant => (
+              <span
+                className={isVariantSelectable(variant) ? 'product-card-variant-chip' : 'product-card-variant-chip muted'}
+                key={variant.id}
+              >
+                {variant.label?.[lang] || variant.label?.az}
+              </span>
+            ))}
+          </div>
+        ) : null}
         {hoverImage && (
           <Image
             className="product-img product-img-hover"

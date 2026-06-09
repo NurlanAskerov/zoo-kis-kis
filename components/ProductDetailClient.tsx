@@ -10,7 +10,8 @@ import {
   getProductTypeLabel,
   stockLabels,
   type AudienceKey,
-  type Product
+  type Product,
+  type ProductVariant
 } from '@/lib/data';
 import { useCatalog } from './CatalogProvider';
 import { AddToCartButton } from '@/components/AddToCartButton';
@@ -87,14 +88,22 @@ function isProductionHiddenDetail(value: string) {
 
 
 const variantCopy = {
-  az: { title: 'Ölçü və qiymətlər', subtitle: 'Mövcud ölçü, həcm və paket variantları', from: 'Qiymət' },
-  en: { title: 'Sizes and prices', subtitle: 'Available size, volume and package variants', from: 'Price' },
-  ru: { title: 'Размеры и цены', subtitle: 'Доступные размеры, объёмы и варианты упаковки', from: 'Цена' }
+  az: { title: 'Ölçü seç', subtitle: 'Ölçünü seçəndə qiymət avtomatik dəyişir', unavailable: 'Stokda yoxdur' },
+  en: { title: 'Choose size', subtitle: 'The price updates when you choose a size', unavailable: 'Out of stock' },
+  ru: { title: 'Выберите размер', subtitle: 'Цена обновляется после выбора размера', unavailable: 'Нет в наличии' }
 };
 
 function getProductVariants(product: Product) {
   return (product.variants ?? [])
     .filter(variant => variant?.label?.az && Number.isFinite(Number(variant.price)) && Number(variant.price) > 0);
+}
+
+function isVariantSelectable(variant: ProductVariant) {
+  return (variant.stock ?? 'inStock') !== 'preOrder';
+}
+
+function getInitialVariantId(variants: ProductVariant[]) {
+  return (variants.find(isVariantSelectable) ?? variants[0])?.id ?? '';
 }
 
 export function ProductDetailClient({ product: initialProduct, slug }: { product?: Product; slug: string }) {
@@ -105,9 +114,24 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   const [remoteProduct, setRemoteProduct] = useState<Product | undefined>(initialProduct);
   const [remoteLoading, setRemoteLoading] = useState(!initialProduct);
   const [remoteTried, setRemoteTried] = useState(Boolean(initialProduct));
+  const [selectedVariantId, setSelectedVariantId] = useState('');
 
   const catalogProduct = findProduct(slug);
   const product = catalogProduct ?? remoteProduct;
+  const productVariants = product ? getProductVariants(product) : [];
+
+  useEffect(() => {
+    if (!productVariants.length) {
+      setSelectedVariantId('');
+      return;
+    }
+
+    setSelectedVariantId(current => {
+      const currentVariant = productVariants.find(variant => variant.id === current);
+      if (currentVariant && isVariantSelectable(currentVariant)) return current;
+      return getInitialVariantId(productVariants);
+    });
+  }, [product?.slug, productVariants.length]);
 
   useEffect(() => {
     setRemoteProduct(initialProduct);
@@ -193,7 +217,10 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   const displayImage = selectedImage || product.image || '/products/cat-food.svg';
   const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(product, lang, profile));
   const productDetails = (product.details?.[lang]?.length ? product.details[lang] : []).filter(item => !isProductionHiddenDetail(item));
-  const productVariants = getProductVariants(product);
+  const selectedVariant = productVariants.find(variant => variant.id === selectedVariantId) ?? productVariants.find(isVariantSelectable) ?? productVariants[0];
+  const selectedPrice = selectedVariant ? Number(selectedVariant.price || 0) : Number(product.price || 0);
+  const selectedOldPrice = selectedVariant?.oldPrice ? Number(selectedVariant.oldPrice) : Number(product.oldPrice || 0);
+  const selectedStock = selectedVariant?.stock ?? product.stock;
   const productAudiences: AudienceKey[] = product.audiences?.length ? product.audiences : ['allPets'];
   const productTitle = product.name?.[lang] || product.name?.az || titleFromSlug(slug);
   const productDescription = product.description?.[lang] || product.description?.az || '';
@@ -252,11 +279,11 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
             <div className="product-tags detail-tags">
               {productAudiences.map(audience => <span key={audience}>{getAudienceLabel(audience, lang)}</span>)}
               <span>{getProductTypeLabel(product.typeKey, lang)}</span>
-              <span>{stockLabels[product.stock]?.[lang] ?? stockLabels.inStock[lang]}</span>
+              <span className={selectedStock === 'preOrder' ? 'muted-stock' : ''}>{stockLabels[selectedStock]?.[lang] ?? stockLabels.inStock[lang]}</span>
             </div>
             <div className="detail-price">
-              <span className="price">{product.price || 0} AZN</span>
-              {product.oldPrice && <span className="old-price">{product.oldPrice} AZN</span>}
+              <span className="price">{selectedPrice || 0} AZN</span>
+              {selectedOldPrice > selectedPrice ? <span className="old-price">{selectedOldPrice} AZN</span> : null}
             </div>
             {productVariants.length ? (
               <div className="product-variant-panel">
@@ -264,14 +291,23 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
                   <strong>{variantCopy[lang].title}</strong>
                   <span>{variantCopy[lang].subtitle}</span>
                 </div>
-                <div className="product-variant-grid">
-                  {productVariants.map(variant => (
-                    <div className="product-variant-item" key={variant.id}>
-                      <span>{variant.label?.[lang] || variant.label?.az}</span>
-                      <strong>{variant.price} AZN</strong>
-                      {variant.oldPrice ? <small>{variant.oldPrice} AZN</small> : null}
-                    </div>
-                  ))}
+                <div className="product-variant-choice-list" role="list" aria-label={variantCopy[lang].title}>
+                  {productVariants.map(variant => {
+                    const selectable = isVariantSelectable(variant);
+                    const active = selectedVariant?.id === variant.id;
+                    return (
+                      <button
+                        className={`product-variant-choice ${active ? 'active' : ''} ${selectable ? '' : 'disabled'}`}
+                        key={variant.id}
+                        type="button"
+                        disabled={!selectable}
+                        onClick={() => setSelectedVariantId(variant.id)}
+                      >
+                        <span>{variant.label?.[lang] || variant.label?.az}</span>
+                        {!selectable ? <small>{variantCopy[lang].unavailable}</small> : null}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ) : null}
