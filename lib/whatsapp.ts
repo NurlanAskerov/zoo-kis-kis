@@ -109,6 +109,5 @@ export function buildProductQuestionMessage(product: Product, lang: Lang, profil
     profile?.phone ? `Telefon: ${safe(profile.phone)}` : undefined,
     profile?.city ? `Şəhər: ${safe(profile.city)}` : undefined,
     profile?.address ? `Ünvan: ${safe(profile.address)}` : undefined
-  ].filter(Boolean).join('
-');
+  ].filter(Boolean).join('\n');
 }
