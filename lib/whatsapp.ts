@@ -43,6 +43,13 @@ function safe(value?: string) {
   return value && value.trim() ? value.trim() : '-';
 }
 
+
+function productVariantLines(product: Product, lang: Lang) {
+  return (product.variants ?? [])
+    .filter(variant => Number(variant.price || 0) > 0)
+    .map(variant => `- ${variant.label?.[lang] || variant.label?.az}: ${variant.price} AZN`);
+}
+
 export function buildOrderMessage(lines: OrderLineForMessage[], profile: CustomerProfile, deliveryType: string, lang: Lang) {
   const subtotal = lines.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const items = lines.map((item, index) => `${index + 1}. ${item.product.name[lang]} x ${item.quantity} - ${item.product.price * item.quantity} AZN`).join('\n');
@@ -83,9 +90,13 @@ export function buildGroomingMessage(profile: CustomerProfile, petType: string, 
 
 
 export function buildProductQuestionMessage(product: Product, lang: Lang, profile?: CustomerProfile) {
+  const variants = productVariantLines(product, lang);
+
   return [
     `Salam, ${brand.name}. Bu məhsul haqqında məlumat almaq istəyirəm:`,
     `${product.name[lang]} - ${product.price} AZN`,
+    variants.length ? `Ölçü/variant qiymətləri:
+${variants.join('\n')}` : undefined,
     `Məhsul linki: /products/${product.slug}`,
     profile?.fullName ? '' : undefined,
     profile?.fullName ? 'Müştəri məlumatları:' : undefined,

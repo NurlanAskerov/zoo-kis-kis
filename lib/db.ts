@@ -5,6 +5,7 @@ import {
   type AudienceKey,
   type Lang,
   type Product,
+  type ProductVariant,
   type ProductCollectionKey,
   type ProductTypeKey,
   type StockKey
@@ -33,6 +34,78 @@ const validProductTypes = new Set<ProductTypeKey>([
 const validAudiences = new Set<AudienceKey>(['cats', 'dogs', 'birds', 'fish', 'hamsters', 'allPets']);
 const validCollections = new Set<ProductCollectionKey>(['discount', 'popular', 'new']);
 const validStocks = new Set<StockKey>(['inStock', 'lowStock', 'preOrder']);
+
+const hiddenProductionDetailPhrases = [
+  'admin paneldən əlavə olunub',
+  'filter və stok məlumatları seçilib',
+  'filter ve stok melumatlari secilib',
+  'filtr və stok məlumatları seçilib',
+  'added from admin panel',
+  'filter and stock data selected',
+  'добавлено через админ-панель',
+  'фильтры и статус наличия выбраны'
+];
+
+function normalizeHiddenDetail(value: string) {
+  return value
+    .toLocaleLowerCase('az-AZ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[əә]/g, 'e')
+    .replace(/[ıİ]/g, 'i')
+    .replace(/[ö]/g, 'o')
+    .replace(/[ü]/g, 'u')
+    .replace(/[ğ]/g, 'g')
+    .replace(/[ş]/g, 's')
+    .replace(/[ç]/g, 'c')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanProductDetails(details?: Partial<Record<Lang, string[]>>) {
+  return langs.reduce((acc, lang) => {
+    const items = Array.isArray(details?.[lang]) ? details[lang] : [];
+    acc[lang] = items
+      .map(item => String(item || '').trim())
+      .filter(Boolean)
+      .filter(item => {
+        const normalized = normalizeHiddenDetail(item);
+        return !hiddenProductionDetailPhrases.some(phrase => normalized.includes(normalizeHiddenDetail(phrase)));
+      });
+    return acc;
+  }, {} as Record<Lang, string[]>);
+}
+
+
+function cleanProductVariants(variants?: ProductVariant[]) {
+  if (!Array.isArray(variants)) return undefined;
+
+  const cleaned: ProductVariant[] = [];
+
+  variants.forEach((variant, index) => {
+    const labelAz = String(variant?.label?.az || '').trim();
+    const fallback = labelAz || String(variant?.label?.en || '').trim() || String(variant?.label?.ru || '').trim();
+    const price = Number(variant?.price || 0);
+    const oldPrice = Number(variant?.oldPrice || 0);
+    const stock = validStocks.has(variant?.stock as StockKey) ? variant?.stock as StockKey : 'inStock';
+
+    if (!fallback || !Number.isFinite(price) || price <= 0) return;
+
+    cleaned.push({
+      id: String(variant?.id || fallback || `variant-${index + 1}`).trim().replace(/\s+/g, '-'),
+      label: {
+        az: labelAz || fallback,
+        en: String(variant?.label?.en || fallback).trim() || fallback,
+        ru: String(variant?.label?.ru || fallback).trim() || fallback
+      },
+      price,
+      oldPrice: Number.isFinite(oldPrice) && oldPrice > price ? oldPrice : undefined,
+      stock
+    });
+  });
+
+  return cleaned.length ? cleaned : undefined;
+}
 
 type PublicProductsRuntimeCache = {
   expiresAt: number;
@@ -428,6 +501,8 @@ export function normalizeProduct(input: Partial<Product>): Product {
   const normalizedCollections: ProductCollectionKey[] = (input.collections ?? [])
     .filter((item): item is ProductCollectionKey => validCollections.has(item as ProductCollectionKey));
 
+  const normalizedVariants = cleanProductVariants(input.variants);
+
   return {
     id: input.id || slug,
     slug,
@@ -436,14 +511,15 @@ export function normalizeProduct(input: Partial<Product>): Product {
     typeKey,
     audiences: normalizedAudiences.length ? normalizedAudiences : ['allPets'],
     collections: normalizedCollections,
-    price: Number(input.price || 0),
+    price: Number(input.price || normalizedVariants?.[0]?.price || 0),
     oldPrice: input.oldPrice ? Number(input.oldPrice) : undefined,
+    variants: normalizedVariants,
     image,
     images: input.images?.length ? input.images : [image],
     badge: input.badge,
     stock: input.stock || 'inStock',
     description: input.description ?? { az: '', en: '', ru: '' },
-    details: input.details ?? { az: [], en: [], ru: [] },
+    details: cleanProductDetails(input.details),
     active: input.active !== false
   };
 }
@@ -518,7 +594,8 @@ function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<st
     stock: stockFromDb(row.stock_status),
     active: Number(row.active ?? 1) === 1,
     description: localized(row.description_az || row.short_description_az, row.description_en || row.short_description_en, row.description_ru || row.short_description_ru),
-    details
+    details,
+    variants: cleanProductVariants(extra.variants as ProductVariant[] | undefined)
   });
 }
 
@@ -635,7 +712,8 @@ export async function upsertProduct(product: Product) {
   const extra = {
     categoryKey: normalized.categoryKey,
     collections,
-    details: normalized.details
+    details: normalized.details,
+    variants: normalized.variants ?? []
   };
 
   await getTursoClient().execute({

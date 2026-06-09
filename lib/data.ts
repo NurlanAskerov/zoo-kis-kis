@@ -14,6 +14,14 @@ export type ProductDepartmentKey = 'food' | 'hygiene' | 'play' | 'home' | 'walki
 export type ProductCollectionKey = 'discount' | 'popular' | 'new';
 export type StockKey = 'inStock' | 'lowStock' | 'preOrder';
 
+export type ProductVariant = {
+  id: string;
+  label: LocalizedText;
+  price: number;
+  oldPrice?: number;
+  stock?: StockKey;
+};
+
 export type Product = {
   id: number | string;
   slug: string;
@@ -24,6 +32,7 @@ export type Product = {
   collections: ProductCollectionKey[];
   price: number;
   oldPrice?: number;
+  variants?: ProductVariant[];
   image: string;
   images?: string[];
   badge?: LocalizedText;
@@ -58,15 +67,15 @@ export const productTypeOptions: { key: ProductTypeKey; label: LocalizedText }[]
   { key: 'treat', label: { az: 'Ödül maması', en: 'Treats', ru: 'Лакомства' } },
   { key: 'toy', label: { az: 'Oyuncaq', en: 'Toys', ru: 'Игрушки' } },
   { key: 'bowl', label: { az: 'Yem və su qabı', en: 'Food and water bowls', ru: 'Миски для корма и воды' } },
-  { key: 'toilet', label: { az: 'Biotualet', en: 'Cat toilet', ru: 'Биотуалет' } },
+  { key: 'toilet', label: { az: 'Biotualet', en: 'Cat toilet', ru: 'Туалет для кошек' } },
   { key: 'litter', label: { az: 'Pişik qumu', en: 'Cat litter', ru: 'Наполнитель' } },
   { key: 'bed', label: { az: 'Yuva / yataq', en: 'Beds and houses', ru: 'Лежанки и домики' } },
   { key: 'leash', label: { az: 'Xalta / boyunluq', en: 'Leashes and collars', ru: 'Поводки и ошейники' } },
   { key: 'carrier', label: { az: 'Daşıma çantası', en: 'Carriers', ru: 'Переноски' } },
   { key: 'aquarium', label: { az: 'Akvarium', en: 'Aquariums', ru: 'Аквариумы' } },
   { key: 'cage', label: { az: 'Qəfəs', en: 'Cages', ru: 'Клетки' } },
-  { key: 'grooming', label: { az: 'Grooming xidməti', en: 'Grooming service', ru: 'Груминг' } },
-  { key: 'care', label: { az: 'Baxım məhsulu', en: 'Care products', ru: 'Средства ухода' } }
+  { key: 'grooming', label: { az: 'Grooming xidməti', en: 'Grooming service', ru: 'Услуги груминга' } },
+  { key: 'care', label: { az: 'Baxım məhsulu', en: 'Care products', ru: 'Товары для ухода' } }
 ];
 
 
@@ -88,7 +97,7 @@ export const productDepartmentOptions: { key: ProductDepartmentKey; label: Local
   },
   {
     key: 'home',
-    label: { az: 'Yuva və rahatlıq', en: 'Beds and comfort', ru: 'Домики и комфорт' },
+    label: { az: 'Yuva və rahatlıq', en: 'Beds and comfort', ru: 'Лежанки и домики' },
     subcategories: ['bed', 'bowl']
   },
   {
@@ -98,7 +107,7 @@ export const productDepartmentOptions: { key: ProductDepartmentKey; label: Local
   },
   {
     key: 'travel',
-    label: { az: 'Daşıma', en: 'Travel', ru: 'Переноски' },
+    label: { az: 'Daşıma', en: 'Travel', ru: 'Транспортировка' },
     subcategories: ['carrier']
   },
   {
@@ -108,7 +117,7 @@ export const productDepartmentOptions: { key: ProductDepartmentKey; label: Local
   },
   {
     key: 'aquarium',
-    label: { az: 'Akvarium', en: 'Aquarium', ru: 'Аквариум' },
+    label: { az: 'Akvarium', en: 'Aquarium', ru: 'Аквариумы' },
     subcategories: ['aquarium']
   },
   {
@@ -134,26 +143,26 @@ export const collectionOptions: { key: ProductCollectionKey; label: LocalizedTex
 export const stockLabels: Record<StockKey, LocalizedText> = {
   inStock: { az: 'Stokda var', en: 'In stock', ru: 'В наличии' },
   lowStock: { az: 'Az qalıb', en: 'Low stock', ru: 'Мало осталось' },
-  preOrder: { az: 'Sifarişlə', en: 'By order', ru: 'Под заказ' }
+  preOrder: { az: 'Sifarişlə', en: 'By order', ru: 'На заказ' }
 };
 
 export const categories: Category[] = [
   { key: 'dry-food', icon: '🥣', name: { az: 'Quru yemlər', en: 'Dry food', ru: 'Сухой корм' }, description: { az: 'Pişik, it və digər dostlar üçün quru yemlər', en: 'Dry food for cats, dogs and other pets', ru: 'Сухой корм для кошек, собак и других питомцев' } },
   { key: 'wet-food', icon: '🥫', name: { az: 'Yaş yemlər', en: 'Wet food', ru: 'Влажный корм' }, description: { az: 'Konserv və paket yaş yem seçimləri', en: 'Canned and pouch wet food options', ru: 'Консервы и паучи с влажным кормом' } },
-  { key: 'treats', icon: '🦴', name: { az: 'Ödül mamaları', en: 'Treats', ru: 'Лакомства' }, description: { az: 'Təlim və sevindirmək üçün dadlı seçimlər', en: 'Tasty choices for training and rewards', ru: 'Вкусные варианты для дрессировки и поощрения' } },
-  { key: 'toys', icon: '🎾', name: { az: 'Oyuncaqlar', en: 'Toys', ru: 'Игрушки' }, description: { az: 'Rahat və əyləncəli oyun məhsulları', en: 'Simple and fun play products', ru: 'Удобные и весёлые товары для игр' } },
+  { key: 'treats', icon: '🦴', name: { az: 'Ödül mamaları', en: 'Treats', ru: 'Лакомства' }, description: { az: 'Təlim və sevindirmək üçün dadlı seçimlər', en: 'Tasty choices for training and rewards', ru: 'Лакомства для дрессировки и поощрения' } },
+  { key: 'toys', icon: '🎾', name: { az: 'Oyuncaqlar', en: 'Toys', ru: 'Игрушки' }, description: { az: 'Rahat və əyləncəli oyun məhsulları', en: 'Simple and fun play products', ru: 'Безопасные игрушки для активных игр' } },
   { key: 'bowls', icon: '🍽️', name: { az: 'Yem qabları', en: 'Bowls', ru: 'Миски' }, description: { az: 'Yem və su qabları', en: 'Food and water bowls', ru: 'Миски для корма и воды' } },
-  { key: 'toilets', icon: '🚽', name: { az: 'Biotualetlər', en: 'Cat toilets', ru: 'Биотуалеты' }, description: { az: 'Pişik tualetləri və aksesuarları', en: 'Cat toilets and accessories', ru: 'Туалеты и аксессуары для кошек' } },
+  { key: 'toilets', icon: '🚽', name: { az: 'Biotualetlər', en: 'Cat toilets', ru: 'Туалеты для кошек' }, description: { az: 'Pişik tualetləri və aksesuarları', en: 'Cat toilets and accessories', ru: 'Туалеты и аксессуары для кошек' } },
   { key: 'litter', icon: '✨', name: { az: 'Qumlar', en: 'Cat litter', ru: 'Наполнители' }, description: { az: 'Pişik qumu və doldurucular', en: 'Cat litter and fillers', ru: 'Наполнители для кошачьих туалетов' } },
   { key: 'beds', icon: '🏠', name: { az: 'Yuvalar', en: 'Beds and houses', ru: 'Лежанки и домики' }, description: { az: 'Rahat yataqlar və evlər', en: 'Comfortable beds and houses', ru: 'Удобные лежанки и домики' } },
   { key: 'leashes', icon: '🦮', name: { az: 'Xaltalar', en: 'Leashes and collars', ru: 'Поводки и ошейники' }, description: { az: 'Boyunluq, xalta və gəzinti məhsulları', en: 'Collars, leashes and walking products', ru: 'Ошейники, поводки и товары для прогулок' } },
   { key: 'carriers', icon: '👜', name: { az: 'Çantalar', en: 'Carriers', ru: 'Переноски' }, description: { az: 'Daşıma çantaları', en: 'Pet carriers', ru: 'Сумки-переноски' } },
   { key: 'aquariums', icon: '🐟', name: { az: 'Akvariumlar', en: 'Aquariums', ru: 'Аквариумы' }, description: { az: 'Balıq və akvarium məhsulları', en: 'Fish and aquarium products', ru: 'Товары для рыб и аквариумов' } },
-  { key: 'dog-cages', icon: '🐕', name: { az: 'İt qəfəsləri', en: 'Dog crates', ru: 'Клетки для собак' }, description: { az: 'İtlər üçün ev və səyahət qəfəsləri', en: 'Crates for dogs at home and travel', ru: 'Клетки для собак для дома и поездок' } },
+  { key: 'dog-cages', icon: '🐕', name: { az: 'İt qəfəsləri', en: 'Dog crates', ru: 'Клетки для собак' }, description: { az: 'İtlər üçün ev və səyahət qəfəsləri', en: 'Crates for dogs at home and travel', ru: 'Клетки для собак: для дома и поездок' } },
   { key: 'bird-cages', icon: '🐦', name: { az: 'Quş qəfəsləri', en: 'Bird cages', ru: 'Клетки для птиц' }, description: { az: 'Quşlar üçün qəfəslər', en: 'Cages for birds', ru: 'Клетки для птиц' } },
   { key: 'hamsters', icon: '🐹', name: { az: 'Xomyak məhsulları', en: 'Hamster products', ru: 'Товары для хомяков' }, description: { az: 'Xomyak yemləri və aksesuarları', en: 'Hamster food and accessories', ru: 'Корма и аксессуары для хомяков' } },
-  { key: 'care', icon: '🧴', name: { az: 'Baxım', en: 'Care', ru: 'Уход' }, description: { az: 'Qulluq məhsulları', en: 'Care products', ru: 'Средства ухода' } },
-  { key: 'grooming', icon: '✂️', name: { az: 'Grooming', en: 'Grooming', ru: 'Груминг' }, description: { az: 'Tük kəsimi, yuma və gigiyena xidməti', en: 'Haircut, washing and hygiene service', ru: 'Стрижка, мытьё и гигиенический уход' } }
+  { key: 'care', icon: '🧴', name: { az: 'Baxım', en: 'Care', ru: 'Уход' }, description: { az: 'Qulluq məhsulları', en: 'Care products', ru: 'Товары для ухода' } },
+  { key: 'grooming', icon: '✂️', name: { az: 'Grooming', en: 'Grooming', ru: 'Услуги груминга' }, description: { az: 'Tük kəsimi, yuma və gigiyena xidməti', en: 'Haircut, washing and hygiene service', ru: 'Стрижка, мытьё и гигиенический уход' } }
 ];
 
 export const products: Product[] = [
@@ -211,11 +220,11 @@ export const products: Product[] = [
     images: ['/products/toy-balls.svg', '/products/toy-balls-alt.svg', '/products/cat-food-alt.svg'],
     badge: { az: 'Yeni', en: 'New', ru: 'Новинка' },
     stock: 'lowStock',
-    description: { az: 'Pişiklər üçün yumşaq, sadə və əyləncəli oyuncaq toplar.', en: 'Soft, simple and fun toy balls for cats.', ru: 'Мягкие, простые и весёлые мячики для кошек.' },
+    description: { az: 'Pişiklər üçün yumşaq, sadə və əyləncəli oyuncaq toplar.', en: 'Soft, simple and fun toy balls for cats.', ru: 'Мягкие и весёлые мячики для кошек.' },
     details: {
       az: ['Pişiklər üçün oyun məhsulu', 'Ev içi oyunlar üçün rahatdır', 'Pastel və göz yormayan görünüş'],
       en: ['Play product for cats', 'Comfortable for indoor play', 'Soft pastel look'],
-      ru: ['Игрушка для кошек', 'Подходит для домашних игр', 'Спокойные пастельные цвета']
+      ru: ['Игрушка для кошек', 'Подходит для домашних игр', 'Приятные пастельные цвета']
     }
   },
   {
@@ -236,7 +245,7 @@ export const products: Product[] = [
     details: {
       az: ['Pişik və balaca itlər üçün', 'Yumşaq içlik', 'Ev şəraitində rahat istifadə'],
       en: ['For cats and small dogs', 'Soft filling', 'Comfortable for home use'],
-      ru: ['Для кошек и маленьких собак', 'Мягкий наполнитель', 'Удобно для дома']
+      ru: ['Для кошек и маленьких собак', 'Мягкий наполнитель', 'Подходит для дома']
     }
   },
   {
@@ -296,13 +305,13 @@ export const products: Product[] = [
     details: {
       az: ['Quşlar üçün nəzərdə tutulub', 'Yem qabı üçün yer', 'Asan təmizlənmə'],
       en: ['Designed for birds', 'Space for a food cup', 'Easy to clean'],
-      ru: ['Для птиц', 'Место для кормушки', 'Легко чистить']
+      ru: ['Для птиц', 'Есть место для кормушки', 'Легко очищается']
     }
   },
   {
     id: 8,
     slug: 'grooming-baxim-paketi',
-    name: { az: 'Grooming baxım paketi', en: 'Grooming care package', ru: 'Пакет услуг груминга' },
+    name: { az: 'Grooming baxım paketi', en: 'Grooming care package', ru: 'Пакет груминга' },
     categoryKey: 'grooming',
     typeKey: 'grooming',
     audiences: ['cats', 'dogs'],
@@ -312,7 +321,7 @@ export const products: Product[] = [
     images: ['/products/grooming.svg', '/products/grooming-alt.svg', '/products/bowl-alt.svg'],
     badge: { az: 'Xidmət', en: 'Service', ru: 'Услуга' },
     stock: 'preOrder',
-    description: { az: 'Tük kəsimi, yuma və gigiyena üçün ilkin grooming paketi.', en: 'A starter grooming package for haircut, washing and hygiene.', ru: 'Базовый пакет груминга: стрижка, мытьё и гигиена.' },
+    description: { az: 'Tük kəsimi, yuma və gigiyena üçün ilkin grooming paketi.', en: 'A starter grooming package for haircut, washing and hygiene.', ru: 'Базовый пакет груминга: стрижка, мытьё и гигиенический уход.' },
     details: {
       az: ['Pişik və itlər üçün', 'WhatsApp ilə vaxt razılaşdırılır', 'Qiymət ölçüyə görə dəyişə bilər'],
       en: ['For cats and dogs', 'Appointment is arranged via WhatsApp', 'Price may vary by pet size'],
@@ -322,7 +331,7 @@ export const products: Product[] = [
   {
     id: 9,
     slug: 'pisik-biotualeti',
-    name: { az: 'Qapalı pişik biotualeti', en: 'Covered cat toilet', ru: 'Закрытый биотуалет для кошек' },
+    name: { az: 'Qapalı pişik biotualeti', en: 'Covered cat toilet', ru: 'Закрытый туалет для кошек' },
     categoryKey: 'toilets',
     typeKey: 'toilet',
     audiences: ['cats'],
@@ -332,7 +341,7 @@ export const products: Product[] = [
     images: ['/products/cat-litter.svg', '/products/cat-toilet-alt.svg', '/products/cat-litter-alt.svg'],
     badge: { az: 'Yeni', en: 'New', ru: 'Новинка' },
     stock: 'inStock',
-    description: { az: 'Pişiklər üçün qapalı və səliqəli biotualet modeli.', en: 'A covered and tidy cat toilet model.', ru: 'Закрытая и аккуратная модель туалета для кошек.' },
+    description: { az: 'Pişiklər üçün qapalı və səliqəli biotualet modeli.', en: 'A covered and tidy cat toilet model.', ru: 'Аккуратный закрытый туалет для кошек.' },
     details: {
       az: ['Pişiklər üçün biotualet', 'Evdə səliqəli görünür', 'Qoxu yayılmasını azaltmağa kömək edir'],
       en: ['Cat toilet', 'Looks tidy at home', 'Helps reduce odor spread'],
@@ -357,7 +366,7 @@ export const products: Product[] = [
     details: {
       az: ['Xomyaklar üçün', 'Kompakt ölçü', 'Aksesuarlar üçün yer'],
       en: ['For hamsters', 'Compact size', 'Space for accessories'],
-      ru: ['Для хомяков', 'Компактный размер', 'Место для аксессуаров']
+      ru: ['Для хомяков', 'Компактный размер', 'Есть место для аксессуаров']
     }
   },
   {
@@ -375,9 +384,9 @@ export const products: Product[] = [
     stock: 'preOrder',
     description: { az: 'Balıqlar üçün sadə akvarium start dəsti.', en: 'A simple aquarium starter set for fish.', ru: 'Простой стартовый набор для аквариума.' },
     details: {
-      az: ['Balıqlar üçün', 'Start üçün rahat seçim', 'Detallar admin paneldən əlavə oluna bilər'],
-      en: ['For fish', 'Convenient starter choice', 'Details can be added from the admin panel'],
-      ru: ['Для рыб', 'Удобно для старта', 'Детали можно добавить из админ-панели']
+      az: ['Balıqlar üçün', 'Start üçün rahat seçim'],
+      en: ['For fish', 'Convenient starter choice'],
+      ru: ['Для рыб', 'Подходит для старта']
     }
   },
   {
@@ -420,7 +429,7 @@ export const products: Product[] = [
     details: {
       az: ['İtlər üçün nəzərdə tutulub', 'Qatlanan konstruksiya', 'Ev və səyahət üçün rahatdır'],
       en: ['Designed for dogs', 'Foldable construction', 'Convenient for home and travel'],
-      ru: ['Для собак', 'Складная конструкция', 'Удобно для дома и поездок']
+      ru: ['Для собак', 'Складная конструкция', 'Подходит для дома и поездок']
     }
   },
   {
@@ -461,7 +470,7 @@ export const products: Product[] = [
     details: {
       az: ['İtlər üçün rahat yuva', 'Yumşaq içlik', 'Yuyulması rahat material'],
       en: ['Comfortable dog bed', 'Soft filling', 'Easy-to-clean material'],
-      ru: ['Удобная лежанка для собак', 'Мягкий наполнитель', 'Материал легко очищается']
+      ru: ['Удобная лежанка для собак', 'Мягкий наполнитель', 'Материал легко чистится']
     }
   },
   {
@@ -501,7 +510,7 @@ export const products: Product[] = [
     details: {
       az: ['Pişiklər üçün', 'Təlim və mükafat üçün', 'Kiçik porsiyalar'],
       en: ['For cats', 'For training and rewards', 'Small portions'],
-      ru: ['Для кошек', 'Для тренировки и поощрения', 'Небольшие порции']
+      ru: ['Для кошек', 'Для дрессировки и поощрения', 'Небольшие порции']
     }
   },
   {
@@ -539,7 +548,7 @@ export const products: Product[] = [
     details: {
       az: ['Balıqlar üçün', 'Gündəlik yem', 'Akvarium məhsulları ilə uyğun'],
       en: ['For fish', 'Daily food', 'Works with aquarium products'],
-      ru: ['Для рыб', 'Ежедневный корм', 'Подходит к товарам для аквариума']
+      ru: ['Для рыб', 'Ежедневный корм', 'Подходит для аквариумного раздела']
     }
   },
   {
@@ -554,7 +563,7 @@ export const products: Product[] = [
     image: '/products/hamster-food.svg',
     images: ['/products/hamster-food.svg', '/products/bird-cage-alt.svg', '/products/dog-cage-alt.svg'],
     stock: 'inStock',
-    description: { az: 'Xomyakların gündəlik qidalanması üçün yem qarışığı.', en: 'Food mix for daily hamster nutrition.', ru: 'Кормовая смесь для ежедневного питания хомяков.' },
+    description: { az: 'Xomyakların gündəlik qidalanması üçün yem qarışığı.', en: 'Food mix for daily hamster nutrition.', ru: 'Кормовая смесь для ежедневного рациона хомяков.' },
     details: {
       az: ['Xomyaklar üçün', 'Gündəlik istifadə', 'Qəfəs aksesuarları ilə uyğun'],
       en: ['For hamsters', 'Daily use', 'Works with cage accessories'],

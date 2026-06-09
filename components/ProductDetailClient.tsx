@@ -44,6 +44,59 @@ function titleFromSlug(slug: string) {
     .trim() || 'Məhsul';
 }
 
+const hiddenProductionDetailPhrases = [
+  'admin paneldən əlavə olunub',
+  'filter və stok məlumatları seçilib',
+  'filter ve stok melumatlari secilib',
+  'filtr və stok məlumatları seçilib',
+  'added from admin panel',
+  'filter and stock data selected',
+  'добавлено через админ-панель',
+  'фильтры и статус наличия выбраны'
+];
+
+function isProductionHiddenDetail(value: string) {
+  const normalized = value
+    .toLocaleLowerCase('az-AZ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[əә]/g, 'e')
+    .replace(/[ıİ]/g, 'i')
+    .replace(/[ö]/g, 'o')
+    .replace(/[ü]/g, 'u')
+    .replace(/[ğ]/g, 'g')
+    .replace(/[ş]/g, 's')
+    .replace(/[ç]/g, 'c')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return hiddenProductionDetailPhrases.some(phrase => normalized.includes(
+    phrase
+      .toLocaleLowerCase('az-AZ')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[əә]/g, 'e')
+      .replace(/[ıİ]/g, 'i')
+      .replace(/[ö]/g, 'o')
+      .replace(/[ü]/g, 'u')
+      .replace(/[ğ]/g, 'g')
+      .replace(/[ş]/g, 's')
+      .replace(/[ç]/g, 'c')
+  ));
+}
+
+
+const variantCopy = {
+  az: { title: 'Ölçü və qiymətlər', subtitle: 'Mövcud ölçü, həcm və paket variantları', from: 'Qiymət' },
+  en: { title: 'Sizes and prices', subtitle: 'Available size, volume and package variants', from: 'Price' },
+  ru: { title: 'Размеры и цены', subtitle: 'Доступные размеры, объёмы и варианты упаковки', from: 'Цена' }
+};
+
+function getProductVariants(product: Product) {
+  return (product.variants ?? [])
+    .filter(variant => variant?.label?.az && Number.isFinite(Number(variant.price)) && Number(variant.price) > 0);
+}
+
 export function ProductDetailClient({ product: initialProduct, slug }: { product?: Product; slug: string }) {
   const { t, lang } = useLanguage();
   const { findProduct, loading: catalogLoading } = useCatalog();
@@ -139,7 +192,8 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   const liked = isFavorite(product.slug);
   const displayImage = selectedImage || product.image || '/products/cat-food.svg';
   const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(product, lang, profile));
-  const productDetails = product.details?.[lang]?.length ? product.details[lang] : [];
+  const productDetails = (product.details?.[lang]?.length ? product.details[lang] : []).filter(item => !isProductionHiddenDetail(item));
+  const productVariants = getProductVariants(product);
   const productAudiences: AudienceKey[] = product.audiences?.length ? product.audiences : ['allPets'];
   const productTitle = product.name?.[lang] || product.name?.az || titleFromSlug(slug);
   const productDescription = product.description?.[lang] || product.description?.az || '';
@@ -204,6 +258,23 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
               <span className="price">{product.price || 0} AZN</span>
               {product.oldPrice && <span className="old-price">{product.oldPrice} AZN</span>}
             </div>
+            {productVariants.length ? (
+              <div className="product-variant-panel">
+                <div className="product-variant-head">
+                  <strong>{variantCopy[lang].title}</strong>
+                  <span>{variantCopy[lang].subtitle}</span>
+                </div>
+                <div className="product-variant-grid">
+                  {productVariants.map(variant => (
+                    <div className="product-variant-item" key={variant.id}>
+                      <span>{variant.label?.[lang] || variant.label?.az}</span>
+                      <strong>{variant.price} AZN</strong>
+                      {variant.oldPrice ? <small>{variant.oldPrice} AZN</small> : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {productDetails.length ? (
               <div className="list">
                 {productDetails.map(item => <span className="list-item" key={item}><CheckCircle2 size={18} /> {item}</span>)}

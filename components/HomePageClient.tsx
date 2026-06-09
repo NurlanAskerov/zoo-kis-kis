@@ -2,9 +2,18 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, HeartHandshake, MapPin, PackageCheck, Scissors, ShieldCheck, Sparkles, Truck } from 'lucide-react';
-import { deliverySettings, groomingServices, type ProductCollectionKey } from '@/lib/data';
+import {
+  audienceOptions,
+  deliverySettings,
+  groomingServices,
+  productTypeOptions,
+  type AudienceKey,
+  type Lang,
+  type ProductCollectionKey,
+  type ProductTypeKey
+} from '@/lib/data';
 import { CategoryScroller } from '@/components/CategoryScroller';
 import { GroomingRequestButton } from '@/components/GroomingRequestButton';
 import { ProductCarousel, type ProductCarouselHandle } from '@/components/ProductCarousel';
@@ -61,38 +70,267 @@ function CollectionBlock({ title, collection }: { title: string; collection: Pro
   );
 }
 
+const quickFilterTypes: Record<Exclude<AudienceKey, 'allPets'>, ProductTypeKey[]> = {
+  dogs: ['dryFood', 'wetFood', 'toy', 'leash', 'carrier', 'grooming'],
+  cats: ['dryFood', 'wetFood', 'litter', 'toilet', 'toy', 'carrier'],
+  birds: ['dryFood', 'cage', 'toy'],
+  fish: ['dryFood', 'aquarium', 'care'],
+  hamsters: ['dryFood', 'cage', 'bed', 'toy']
+};
+
+type QuickTabChild = { key: string; label: string; href: string };
+type QuickTab = { key: string; label: string; href: string; children: QuickTabChild[] };
+
+function labelsByLang(lang: Lang) {
+  return {
+    quick: lang === 'ru' ? 'Быстрый фильтр' : lang === 'en' ? 'Quick filter' : 'Sürətli filter',
+    all: lang === 'ru' ? 'Все товары' : lang === 'en' ? 'All products' : 'Bütün məhsullar',
+    campaigns: lang === 'ru' ? 'Акции' : lang === 'en' ? 'Campaigns' : 'Kampaniyalar',
+    discounted: lang === 'ru' ? 'Скидки' : lang === 'en' ? 'Discounts' : 'Endirimlər',
+    popular: lang === 'ru' ? 'Популярное' : lang === 'en' ? 'Popular' : 'Populyar',
+    newProducts: lang === 'ru' ? 'Новинки' : lang === 'en' ? 'New arrivals' : 'Yeni məhsullar'
+  };
+}
+
+function QuickFilterMenu() {
+  const { lang } = useLanguage();
+  const labels = labelsByLang(lang);
+  const tabs = useMemo<QuickTab[]>(() => {
+    const petTabs = audienceOptions
+      .filter(option => option.key !== 'allPets')
+      .map(option => {
+        const audienceKey = option.key as Exclude<AudienceKey, 'allPets'>;
+        return {
+          key: audienceKey,
+          label: option.label[lang],
+          href: `/products?audience=${audienceKey}`,
+          children: quickFilterTypes[audienceKey].map((typeKey: ProductTypeKey) => ({
+            key: `${audienceKey}-${typeKey}`,
+            label: productTypeOptions.find(type => type.key === typeKey)?.label[lang] ?? typeKey,
+            href: `/products?audience=${audienceKey}&type=${typeKey}`
+          }))
+        };
+      });
+
+    return [
+      { key: 'all-products', label: labels.all, href: '/products', children: [] },
+      ...petTabs,
+      {
+        key: 'campaigns',
+        label: labels.campaigns,
+        href: '/products?collection=discount',
+        children: [
+          { key: 'discount', label: labels.discounted, href: '/products?collection=discount' },
+          { key: 'popular', label: labels.popular, href: '/products?collection=popular' },
+          { key: 'new', label: labels.newProducts, href: '/products?collection=new' }
+        ]
+      }
+    ];
+  }, [lang, labels.all, labels.campaigns, labels.discounted, labels.newProducts, labels.popular]);
+
+  return (
+    <section className="home-filter-menu-section" aria-label={labels.quick}>
+      <div className="container home-filter-menu">
+        <div className="home-filter-scroll">
+          {tabs.map(tab => (
+            <div className="home-filter-item" key={tab.key}>
+              <Link className="home-filter-link" href={tab.href}>{tab.label}</Link>
+              {tab.children.length ? (
+                <div className="home-filter-dropdown">
+                  <Link className="home-filter-dropdown-title" href={tab.href}>{tab.label}</Link>
+                  <div className="home-filter-dropdown-grid">
+                    {tab.children.map(child => (
+                      <Link className="home-filter-sublink" href={child.href} key={child.key}>{child.label}</Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type HeroCopy = {
+  store: {
+    kicker: string;
+    title: string;
+    text: string;
+    primary: string;
+    secondary: string;
+    badges: string[];
+  };
+  grooming: {
+    kicker: string;
+    title: string;
+    text: string;
+    primary: string;
+    secondary: string;
+    badges: string[];
+  };
+};
+
+const heroCopyByLang: Record<Lang, HeroCopy> = {
+  az: {
+    store: {
+      kicker: 'Zoo Kis-Kis mağazası',
+      title: 'Sevimli dostunuz üçün ən yaxşı seçimlər.',
+      text: 'Keyfiyyətli yemlər, oyuncaqlar, qulluq məhsulları və sərfəli kampaniyalar bir ünvanda.',
+      primary: 'Məhsullara bax',
+      secondary: 'Endirimləri gör',
+      badges: ['Keyfiyyətli yemlər', 'Oyuncaqlar', 'Qulluq məhsulları', 'Uyğun qiymətlər']
+    },
+    grooming: {
+      kicker: 'Professional grooming',
+      title: 'Sağlam tük, təmiz görünüş və rahat qulluq.',
+      text: 'Yuma, fen, daranma, tük kəsimi, qulaq-göz və pəncə baxımı üçün müraciətinizi göndərin.',
+      primary: 'Grooming sifariş et',
+      secondary: 'Xidmətlərə bax',
+      badges: ['Yuma', 'Fen', 'Daranma', 'Tük kəsimi', 'Gigiyenik qulluq']
+    }
+  },
+  en: {
+    store: {
+      kicker: 'Zoo Kis-Kis store',
+      title: 'The best choices for your lovely pet.',
+      text: 'Quality food, toys, care products and special offers in one place.',
+      primary: 'View products',
+      secondary: 'See discounts',
+      badges: ['Quality food', 'Toys', 'Care products', 'Good prices']
+    },
+    grooming: {
+      kicker: 'Professional grooming',
+      title: 'Healthy fur, clean look and gentle care.',
+      text: 'Send a request for washing, drying, brushing, haircut, ear-eye and paw care.',
+      primary: 'Book grooming',
+      secondary: 'View services',
+      badges: ['Wash', 'Drying', 'Brushing', 'Haircut', 'Hygiene care']
+    }
+  },
+  ru: {
+    store: {
+      kicker: 'Магазин Zoo Kis-Kis',
+      title: 'Лучший выбор для вашего любимца.',
+      text: 'Качественные корма, игрушки, товары по уходу и выгодные предложения в одном месте.',
+      primary: 'Смотреть товары',
+      secondary: 'Смотреть скидки',
+      badges: ['Качественные корма', 'Игрушки', 'Товары по уходу', 'Хорошие цены']
+    },
+    grooming: {
+      kicker: 'Профессиональный груминг',
+      title: 'Здоровая шерсть, чистый вид и бережный уход.',
+      text: 'Оставьте заявку на мытьё, сушку, расчёсывание, стрижку, уход за ушами, глазами и лапами.',
+      primary: 'Записаться на груминг',
+      secondary: 'Смотреть услуги',
+      badges: ['Мытьё', 'Сушка', 'Расчёсывание', 'Стрижка', 'Гигиенический уход']
+    }
+  }
+};
+
 export function HomePageClient() {
   const { t, lang } = useLanguage();
   const services = groomingServices[lang];
+  const [activeSlide, setActiveSlide] = useState(0);
+  const copy = heroCopyByLang[lang];
+
+  const slides = [
+    {
+      id: 'store',
+      image: '/banners/zoo-kis-kis-store.webp',
+      alt: 'Zoo Kis-Kis mağazası banneri',
+      variant: 'store' as const,
+      copy: copy.store
+    },
+    {
+      id: 'grooming',
+      image: '/banners/zoo-kis-kis-grooming.webp',
+      alt: 'Zoo Kis-Kis grooming banneri',
+      variant: 'grooming' as const,
+      copy: copy.grooming
+    }
+  ];
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide(current => (current + 1) % slides.length);
+    }, 6500);
+
+    return () => window.clearInterval(timer);
+  }, [slides.length]);
+
+  const previousSlide = () => setActiveSlide(current => (current - 1 + slides.length) % slides.length);
+  const nextSlide = () => setActiveSlide(current => (current + 1) % slides.length);
 
   return (
     <main>
-      <section className="hero">
-        <div className="container hero-card">
-          <div className="hero-copy">
-            <p className="eyebrow">{t('heroKicker')}</p>
-            <h1>{t('heroTitle')}</h1>
-            <p>{t('heroText')}</p>
-            <div className="hero-cta">
-              <Link href="/products" className="btn btn-primary">{t('viewProducts')}</Link>
-              <Link href="/grooming" className="btn btn-soft">{t('orderGrooming')}</Link>
+      <QuickFilterMenu />
+
+      <section className="hero hero-image-slider-section">
+        <div className="container">
+          <div className="hero-image-slider">
+            <div className="hero-image-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
+              {slides.map((slide, index) => (
+                <article className={`hero-image-slide hero-image-slide-${slide.variant}`} key={slide.id} aria-hidden={activeSlide !== index}>
+                  <Image
+                    src={slide.image}
+                    alt={slide.alt}
+                    fill
+                    priority={index === 0}
+                    sizes="(max-width: 768px) 100vw, 1180px"
+                    className="hero-image-background"
+                  />
+                  <div className="hero-image-overlay" />
+                  <div className="hero-image-content">
+                    <div className="hero-image-logo-row">
+                      <Image src="/logo-transparent.png" alt="Zoo Kis-Kis" width={170} height={108} className="hero-image-logo" />
+                      <span>{slide.copy.kicker}</span>
+                    </div>
+                    <h1>{slide.copy.title}</h1>
+                    <p>{slide.copy.text}</p>
+                    <div className="hero-image-badges">
+                      {slide.copy.badges.map(badge => <span key={badge}>{badge}</span>)}
+                    </div>
+                    <div className="hero-image-actions">
+                      {slide.variant === 'grooming' ? (
+                        <>
+                          <GroomingRequestButton buttonClassName="btn btn-primary hero-image-main-btn">
+                            {slide.copy.primary}
+                          </GroomingRequestButton>
+                          <Link href="/grooming" className="btn btn-soft hero-image-second-btn">{slide.copy.secondary}</Link>
+                        </>
+                      ) : (
+                        <>
+                          <Link href="/products" className="btn btn-primary hero-image-main-btn">{slide.copy.primary}</Link>
+                          <Link href="/products?collection=discount" className="btn btn-soft hero-image-second-btn">{slide.copy.secondary}</Link>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
-            <div className="hero-points">
-              <span className="hero-point"><Truck size={16} /> {t('deliveryAvailable')}</span>
-              <span className="hero-point"><ShieldCheck size={16} /> {t('easyChoice')}</span>
-              <span className="hero-point"><HeartHandshake size={16} /> {t('petCare')}</span>
-            </div>
-          </div>
-          <div className="hero-visual hero-pets-visual">
-            <div className="hero-pets-frame">
-              <Image
-                src="/hero-pets.png"
-                alt="Pişik və it ilə Zoo Kis-Kis pet shop hero şəkli"
-                fill
-                priority
-                sizes="(max-width: 768px) 100vw, 52vw"
-                className="hero-pets-image"
-              />
+
+            <div className="hero-image-controls" aria-label="Banner idarəsi">
+              <button type="button" className="hero-image-arrow" aria-label="Əvvəlki banner" onClick={previousSlide}>
+                <ChevronLeft size={21} />
+              </button>
+              <div className="hero-image-dots">
+                {slides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    aria-label={`${index + 1}-ci banner`}
+                    aria-pressed={activeSlide === index}
+                    className={`hero-image-dot ${activeSlide === index ? 'active' : ''}`}
+                    onClick={() => setActiveSlide(index)}
+                  />
+                ))}
+              </div>
+              <button type="button" className="hero-image-arrow" aria-label="Növbəti banner" onClick={nextSlide}>
+                <ChevronRight size={21} />
+              </button>
             </div>
           </div>
         </div>

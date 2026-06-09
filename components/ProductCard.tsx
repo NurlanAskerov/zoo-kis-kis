@@ -25,6 +25,23 @@ async function shareProduct(product: Product, lang: 'az' | 'en' | 'ru') {
   }
 }
 
+
+function getVariantPrices(product: Product) {
+  return (product.variants ?? [])
+    .map(variant => Number(variant.price || 0))
+    .filter(price => Number.isFinite(price) && price > 0);
+}
+
+function formatCardPrice(product: Product, lang: 'az' | 'en' | 'ru') {
+  const variantPrices = getVariantPrices(product);
+  if (!variantPrices.length) return `${product.price} AZN`;
+
+  const minPrice = Math.min(...variantPrices);
+  if (lang === 'ru') return `от ${minPrice} AZN`;
+  if (lang === 'en') return `from ${minPrice} AZN`;
+  return `${minPrice} AZN-dən`;
+}
+
 export function ProductCard({ product }: { product: Product }) {
   const { t, lang } = useLanguage();
   const { toggleFavorite, isFavorite } = useCart();
@@ -33,6 +50,7 @@ export function ProductCard({ product }: { product: Product }) {
   const images = product.images?.length ? product.images : [product.image || '/products/cat-food.svg'];
   const hoverImage = images[1];
   const liked = isFavorite(product.slug);
+  const hasVariants = getVariantPrices(product).length > 0;
   const mainIsData = images[0]?.startsWith('data:') ?? false;
   const hoverIsData = Boolean(hoverImage?.startsWith('data:'));
 
@@ -41,7 +59,11 @@ export function ProductCard({ product }: { product: Product }) {
       <button
         className="product-share-btn"
         aria-label={t('shareProduct')}
-        onClick={() => shareProduct(product, lang)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void shareProduct(product, lang);
+        }}
         type="button"
       >
         <Share2 size={16} />
@@ -87,14 +109,18 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         <div className="product-bottom">
           <div>
-            <span className="price">{product.price} AZN</span>
-            {product.oldPrice && <span className="old-price">{product.oldPrice} AZN</span>}
+            <span className="price">{formatCardPrice(product, lang)}</span>
+            {!hasVariants && product.oldPrice && <span className="old-price">{product.oldPrice} AZN</span>}
           </div>
           <div className="product-actions">
             <button
               className={`tiny-btn ${liked ? 'tiny-btn-active' : ''}`}
               aria-label={t('favorites')}
-              onClick={() => toggleFavorite(product.slug)}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleFavorite(product.slug);
+              }}
               type="button"
             >
               <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
