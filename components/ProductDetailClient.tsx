@@ -215,12 +215,12 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
 
   const liked = isFavorite(product.slug);
   const displayImage = selectedImage || product.image || '/products/cat-food.svg';
-  const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(product, lang, profile));
   const productDetails = (product.details?.[lang]?.length ? product.details[lang] : []).filter(item => !isProductionHiddenDetail(item));
   const selectedVariant = productVariants.find(variant => variant.id === selectedVariantId) ?? productVariants.find(isVariantSelectable) ?? productVariants[0];
   const selectedPrice = selectedVariant ? Number(selectedVariant.price || 0) : Number(product.price || 0);
   const selectedOldPrice = selectedVariant?.oldPrice ? Number(selectedVariant.oldPrice) : Number(product.oldPrice || 0);
   const selectedStock = selectedVariant?.stock ?? product.stock;
+  const whatsappUrl = createWhatsAppUrl(buildProductQuestionMessage(product, lang, profile, selectedVariant));
   const productAudiences: AudienceKey[] = product.audiences?.length ? product.audiences : ['allPets'];
   const productTitle = product.name?.[lang] || product.name?.az || titleFromSlug(slug);
   const productDescription = product.description?.[lang] || product.description?.az || '';

@@ -88,7 +88,7 @@ export function CategoryScroller() {
         <span className="pill">{card.label}</span>
 
         <div className="category-title-box">
-          <h3>{card.text}</h3>
+          <h3>{card.text.endsWith('...') ? card.text : `${card.text}...`}</h3>
         </div>
       </div>
     </Link>

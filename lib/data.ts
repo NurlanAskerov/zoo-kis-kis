@@ -57,7 +57,7 @@ export const audienceOptions: { key: AudienceKey; label: LocalizedText }[] = [
   { key: 'dogs', label: { az: 'İtlər üçün', en: 'For dogs', ru: 'Для собак' } },
   { key: 'birds', label: { az: 'Quşlar üçün', en: 'For birds', ru: 'Для птиц' } },
   { key: 'fish', label: { az: 'Balıqlar üçün', en: 'For fish', ru: 'Для рыб' } },
-  { key: 'hamsters', label: { az: 'Xomyaklar üçün', en: 'For hamsters', ru: 'Для хомяков' } },
+  { key: 'hamsters', label: { az: 'Gəmiricilər üçün', en: 'For rodents', ru: 'Для грызунов' } },
   { key: 'allPets', label: { az: 'Bütün dostlar üçün', en: 'For all pets', ru: 'Для всех питомцев' } }
 ];
 
@@ -160,7 +160,7 @@ export const categories: Category[] = [
   { key: 'aquariums', icon: '🐟', name: { az: 'Akvariumlar', en: 'Aquariums', ru: 'Аквариумы' }, description: { az: 'Balıq və akvarium məhsulları', en: 'Fish and aquarium products', ru: 'Товары для рыб и аквариумов' } },
   { key: 'dog-cages', icon: '🐕', name: { az: 'İt qəfəsləri', en: 'Dog crates', ru: 'Клетки для собак' }, description: { az: 'İtlər üçün ev və səyahət qəfəsləri', en: 'Crates for dogs at home and travel', ru: 'Клетки для собак: для дома и поездок' } },
   { key: 'bird-cages', icon: '🐦', name: { az: 'Quş qəfəsləri', en: 'Bird cages', ru: 'Клетки для птиц' }, description: { az: 'Quşlar üçün qəfəslər', en: 'Cages for birds', ru: 'Клетки для птиц' } },
-  { key: 'hamsters', icon: '🐹', name: { az: 'Xomyak məhsulları', en: 'Hamster products', ru: 'Товары для хомяков' }, description: { az: 'Xomyak yemləri və aksesuarları', en: 'Hamster food and accessories', ru: 'Корма и аксессуары для хомяков' } },
+  { key: 'hamsters', icon: '🐹', name: { az: 'Gəmirici məhsulları', en: 'Rodent products', ru: 'Товары для грызунов' }, description: { az: 'Gəmirici yemləri və aksesuarları', en: 'Rodent food and accessories', ru: 'Корма и аксессуары для грызунов' } },
   { key: 'care', icon: '🧴', name: { az: 'Baxım', en: 'Care', ru: 'Уход' }, description: { az: 'Qulluq məhsulları', en: 'Care products', ru: 'Товары для ухода' } },
   { key: 'grooming', icon: '✂️', name: { az: 'Grooming', en: 'Grooming', ru: 'Услуги груминга' }, description: { az: 'Tük kəsimi, yuma və gigiyena xidməti', en: 'Haircut, washing and hygiene service', ru: 'Стрижка, мытьё и гигиенический уход' } }
 ];
@@ -350,8 +350,8 @@ export const products: Product[] = [
   },
   {
     id: 10,
-    slug: 'xomyak-qefesi',
-    name: { az: 'Xomyak qəfəsi', en: 'Hamster cage', ru: 'Клетка для хомяка' },
+    slug: 'gemirici-qefesi',
+    name: { az: 'Gəmirici qəfəsi', en: 'Rodent cage', ru: 'Клетка для грызунов' },
     categoryKey: 'hamsters',
     typeKey: 'cage',
     audiences: ['hamsters'],
@@ -362,11 +362,11 @@ export const products: Product[] = [
     images: ['/products/bird-cage.svg', '/products/dog-cage-alt.svg', '/products/hamster-food.svg'],
     badge: { az: 'Endirim', en: 'Sale', ru: 'Скидка' },
     stock: 'inStock',
-    description: { az: 'Xomyaklar üçün kompakt və rahat qəfəs.', en: 'A compact and comfortable cage for hamsters.', ru: 'Компактная и удобная клетка для хомяков.' },
+    description: { az: 'Gəmiricilər üçün kompakt və rahat qəfəs.', en: 'A compact and comfortable cage for rodents.', ru: 'Компактная и удобная клетка для грызунов.' },
     details: {
-      az: ['Xomyaklar üçün', 'Kompakt ölçü', 'Aksesuarlar üçün yer'],
-      en: ['For hamsters', 'Compact size', 'Space for accessories'],
-      ru: ['Для хомяков', 'Компактный размер', 'Есть место для аксессуаров']
+      az: ['Gəmiricilər üçün', 'Kompakt ölçü', 'Aksesuarlar üçün yer'],
+      en: ['For rodents', 'Compact size', 'Space for accessories'],
+      ru: ['Для грызунов', 'Компактный размер', 'Есть место для аксессуаров']
     }
   },
   {
@@ -553,8 +553,8 @@ export const products: Product[] = [
   },
   {
     id: 20,
-    slug: 'xomyak-yemi',
-    name: { az: 'Xomyak üçün yem', en: 'Hamster food', ru: 'Корм для хомяков' },
+    slug: 'gemirici-yemi',
+    name: { az: 'Gəmiricilər üçün yem', en: 'Rodent food', ru: 'Корм для грызунов' },
     categoryKey: 'hamsters',
     typeKey: 'dryFood',
     audiences: ['hamsters'],
@@ -563,11 +563,11 @@ export const products: Product[] = [
     image: '/products/hamster-food.svg',
     images: ['/products/hamster-food.svg', '/products/bird-cage-alt.svg', '/products/dog-cage-alt.svg'],
     stock: 'inStock',
-    description: { az: 'Xomyakların gündəlik qidalanması üçün yem qarışığı.', en: 'Food mix for daily hamster nutrition.', ru: 'Кормовая смесь для ежедневного рациона хомяков.' },
+    description: { az: 'Gəmiricilərin gündəlik qidalanması üçün yem qarışığı.', en: 'Food mix for daily rodent nutrition.', ru: 'Кормовая смесь для ежедневного рациона грызунов.' },
     details: {
-      az: ['Xomyaklar üçün', 'Gündəlik istifadə', 'Qəfəs aksesuarları ilə uyğun'],
-      en: ['For hamsters', 'Daily use', 'Works with cage accessories'],
-      ru: ['Для хомяков', 'Для ежедневного использования', 'Подходит к аксессуарам для клетки']
+      az: ['Gəmiricilər üçün', 'Gündəlik istifadə', 'Qəfəs aksesuarları ilə uyğun'],
+      en: ['For rodents', 'Daily use', 'Works with cage accessories'],
+      ru: ['Для грызунов', 'Для ежедневного использования', 'Подходит к аксессуарам для клетки']
     }
   }
 ];

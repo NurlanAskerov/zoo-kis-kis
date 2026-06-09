@@ -1,4 +1,4 @@
-import { brand, type Lang, type Product } from './data';
+import { brand, type Lang, type Product, type ProductVariant } from './data';
 
 export type CustomerProfile = {
   fullName: string;
@@ -44,11 +44,15 @@ function safe(value?: string) {
 }
 
 
-function productVariantLines(product: Product, lang: Lang) {
-  return (product.variants ?? [])
-    .filter(variant => Number(variant.price || 0) > 0)
-    .map(variant => `- ${variant.label?.[lang] || variant.label?.az}: ${variant.price} AZN`);
+function productDetailUrl(slug: string, explicitUrl?: string) {
+  if (explicitUrl?.startsWith('http')) return explicitUrl;
+
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://zoo-kis-kis.vercel.app').replace(/\/$/, '');
+  const path = explicitUrl || `/products/${slug}`;
+
+  return `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 }
+
 
 export function buildOrderMessage(lines: OrderLineForMessage[], profile: CustomerProfile, deliveryType: string, lang: Lang) {
   const subtotal = lines.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
@@ -89,20 +93,22 @@ export function buildGroomingMessage(profile: CustomerProfile, petType: string, 
 }
 
 
-export function buildProductQuestionMessage(product: Product, lang: Lang, profile?: CustomerProfile) {
-  const variants = productVariantLines(product, lang);
+export function buildProductQuestionMessage(product: Product, lang: Lang, profile?: CustomerProfile, selectedVariant?: ProductVariant, productUrl?: string) {
+  const selectedVariantLabel = selectedVariant?.label?.[lang] || selectedVariant?.label?.az;
+  const selectedPrice = selectedVariant ? Number(selectedVariant.price || 0) : Number(product.price || 0);
+  const link = productDetailUrl(product.slug, productUrl);
 
   return [
     `Salam, ${brand.name}. Bu məhsul haqqında məlumat almaq istəyirəm:`,
-    `${product.name[lang]} - ${product.price} AZN`,
-    variants.length ? `Ölçü/variant qiymətləri:
-${variants.join('\n')}` : undefined,
-    `Məhsul linki: /products/${product.slug}`,
+    `${product.name[lang]} - ${selectedPrice} AZN`,
+    selectedVariantLabel ? `Seçilən ölçü/variant: ${selectedVariantLabel}` : undefined,
+    `Məhsul linki: ${link}`,
     profile?.fullName ? '' : undefined,
     profile?.fullName ? 'Müştəri məlumatları:' : undefined,
     profile?.fullName ? `Ad Soyad: ${safe(profile.fullName)}` : undefined,
     profile?.phone ? `Telefon: ${safe(profile.phone)}` : undefined,
     profile?.city ? `Şəhər: ${safe(profile.city)}` : undefined,
     profile?.address ? `Ünvan: ${safe(profile.address)}` : undefined
-  ].filter(Boolean).join('\n');
+  ].filter(Boolean).join('
+');
 }
