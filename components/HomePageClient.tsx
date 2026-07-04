@@ -473,9 +473,7 @@ export function HomePageClient() {
             <h2>{t('deliveryTitle')}</h2>
             <p>{t('deliveryText')}</p>
             <div className="list">
-              <span className="list-item"><Truck size={18} /> {t('metro')}: {deliverySettings.metroDeliveryPrice}</span>
-              <span className="list-item"><MapPin size={18} /> {t('addressDelivery')}: {deliverySettings.addressDeliveryFromPrice[lang]}</span>
-              <span className="list-item"><PackageCheck size={18} /> {t('regionPost')}: {deliverySettings.regionPostDeliveryTime[lang]}</span>
+              <span className="list-item"><Truck size={18} /> {t('delivery')}: Wolt</span>
             </div>
             <Link href="/delivery" className="btn btn-primary">{t('moreInfo')}</Link>
           </div>
