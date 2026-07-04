@@ -241,10 +241,10 @@ const heroCopyByLang: Record<Lang, HeroCopy> = {
     grooming: {
       kicker: 'Профессиональный груминг',
       title: 'Здоровая шерсть, аккуратный вид и бережный уход.',
-      text: 'Оставьте заявку на мытьё, сушку, расчёсывание, стрижку, а также уход за ушами, глазами и лапами.',
+      text: 'Оставьте заявку на купание, сушку, расчёсывание, стрижку, а также уход за ушами, глазами и лапами.',
       primary: 'Подробнее',
       secondary: 'Смотреть услуги',
-      badges: ['Мытьё', 'Сушка', 'Расчёсывание', 'Стрижка', 'Гигиенический уход']
+      badges: ['Купание', 'Сушка', 'Расчёсывание', 'Стрижка', 'Гигиенический уход']
     }
   }
 };
@@ -269,7 +269,7 @@ export function HomePageClient() {
     {
       id: 'grooming',
       image: '/banners/zoo-kis-kis-grooming.webp',
-      mobileImage: '/banners/zoo-kis-kis-grooming-mobile-generated.webp',
+      mobileImage: '/banners/zoo-kis-kis-grooming-mobile-generated.png',
       alt: 'Zoo Kis-Kis grooming banneri',
       variant: 'grooming' as const,
       copy: copy.grooming

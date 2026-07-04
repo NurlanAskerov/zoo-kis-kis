@@ -162,7 +162,7 @@ export const categories: Category[] = [
   { key: 'bird-cages', icon: '🐦', name: { az: 'Quş qəfəsləri', en: 'Bird cages', ru: 'Клетки для птиц' }, description: { az: 'Quşlar üçün qəfəslər', en: 'Cages for birds', ru: 'Клетки для птиц' } },
   { key: 'hamsters', icon: '🐹', name: { az: 'Gəmirici məhsulları', en: 'Rodent products', ru: 'Товары для грызунов' }, description: { az: 'Gəmirici yemləri və aksesuarları', en: 'Rodent food and accessories', ru: 'Корма и аксессуары для грызунов' } },
   { key: 'care', icon: '🧴', name: { az: 'Baxım', en: 'Care', ru: 'Уход' }, description: { az: 'Qulluq məhsulları', en: 'Care products', ru: 'Товары для ухода' } },
-  { key: 'grooming', icon: '✂️', name: { az: 'Grooming', en: 'Grooming', ru: 'Услуги груминга' }, description: { az: 'Tük kəsimi, yuma və gigiyena xidməti', en: 'Haircut, washing and hygiene service', ru: 'Стрижка, мытьё и гигиенический уход' } }
+  { key: 'grooming', icon: '✂️', name: { az: 'Grooming', en: 'Grooming', ru: 'Услуги груминга' }, description: { az: 'Tük kəsimi, yuma və gigiyena xidməti', en: 'Haircut, washing and hygiene service', ru: 'Стрижка, купание и гигиенический уход' } }
 ];
 
 export const products: Product[] = [
@@ -321,7 +321,7 @@ export const products: Product[] = [
     images: ['/products/grooming.svg', '/products/grooming-alt.svg', '/products/bowl-alt.svg'],
     badge: { az: 'Xidmət', en: 'Service', ru: 'Услуга' },
     stock: 'preOrder',
-    description: { az: 'Tük kəsimi, yuma və gigiyena üçün ilkin grooming paketi.', en: 'A starter grooming package for haircut, washing and hygiene.', ru: 'Базовый пакет груминга: стрижка, мытьё и гигиенический уход.' },
+    description: { az: 'Tük kəsimi, yuma və gigiyena üçün ilkin grooming paketi.', en: 'A starter grooming package for haircut, washing and hygiene.', ru: 'Базовый пакет груминга: стрижка, купание и гигиенический уход.' },
     details: {
       az: ['Pişik və itlər üçün', 'WhatsApp ilə vaxt razılaşdırılır', 'Qiymət ölçüyə görə dəyişə bilər'],
       en: ['For cats and dogs', 'Appointment is arranged via WhatsApp', 'Price may vary by pet size'],
@@ -573,44 +573,55 @@ export const products: Product[] = [
 ];
 
 export const deliverySettings = {
-  workingHours: '14:00 – 19:00',
+  workingHours: '10:00 – 22:00',
   workingDays: {
-    az: 'Yalnız cümə günləri',
-    en: 'Fridays only',
-    ru: 'Только по пятницам'
+    az: 'Hər gün',
+    en: 'Every day',
+    ru: 'Каждый день'
   },
-  metroDeliveryPrice: '3 AZN',
+  provider: 'Wolt',
+  deliveryOnlyText: {
+    az: 'Çatdırılma yalnız Wolt vasitəsilə həyata keçirilir.',
+    en: 'Delivery is available only via Wolt.',
+    ru: 'Доставка осуществляется только через Wolt.'
+  },
+  deliveryTimeText: {
+    az: 'Hər gün 10:00-dan 22:00-dək',
+    en: 'Every day from 10:00 to 22:00',
+    ru: 'Каждый день с 10:00 до 22:00'
+  },
+  metroDeliveryPrice: 'Wolt',
   addressDeliveryFromPrice: {
-    az: '5 AZN-dən başlayır',
-    en: 'from 5 AZN',
-    ru: 'от 5 AZN'
+    az: 'Wolt vasitəsilə',
+    en: 'via Wolt',
+    ru: 'через Wolt'
   },
   regionPostDeliveryFromPrice: {
-    az: '5 AZN-dən başlayır',
-    en: 'from 5 AZN',
-    ru: 'от 5 AZN'
+    az: 'Yalnız Wolt çatdırılması',
+    en: 'Wolt delivery only',
+    ru: 'Только доставка Wolt'
   },
   regionPostDeliveryTime: {
-    az: '3–5 iş günü',
-    en: '3–5 business days',
-    ru: '3–5 рабочих дней'
+    az: 'Yalnız Wolt çatdırılması',
+    en: 'Wolt delivery only',
+    ru: 'Только доставка Wolt'
   },
   addressDeliveryNote: {
-    az: 'Məsafəyə görə dəyişir',
-    en: 'Depends on the distance',
-    ru: 'Зависит от расстояния'
+    az: 'Sifarişlər hər gün 10:00–22:00 aralığında Wolt ilə göndərilir',
+    en: 'Orders are delivered by Wolt every day between 10:00 and 22:00',
+    ru: 'Заказы доставляются через Wolt каждый день с 10:00 до 22:00'
   },
   postDeliveryNote: {
-    az: 'Bağlamanın çəkisinə görə dəyişir',
-    en: 'Depends on parcel weight',
-    ru: 'Зависит от веса посылки'
+    az: 'Çatdırılma yalnız Wolt ilə edilir',
+    en: 'Delivery is available only via Wolt',
+    ru: 'Доставка осуществляется только через Wolt'
   }
 };
 
 export const groomingServices: Record<Lang, string[]> = {
   az: ['Tük kəsimi', 'Yuma və qurutma', 'Daraq və tükləmə', 'Dırnaq baxımı', 'Gigiyenik baxım', 'Qulluq məsləhəti'],
   en: ['Haircut', 'Washing and drying', 'Brushing and deshedding', 'Nail care', 'Hygiene care', 'Care advice'],
-  ru: ['Стрижка', 'Мытьё и сушка', 'Расчёсывание и вычёсывание', 'Уход за когтями', 'Гигиенический уход', 'Консультация по уходу']
+  ru: ['Стрижка', 'Купание и сушка', 'Расчёсывание и вычёсывание', 'Уход за когтями', 'Гигиенический уход', 'Консультация по уходу']
 };
 
 

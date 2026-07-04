@@ -60,10 +60,9 @@ export default function ProfilePage() {
             <input className="input" value={draft.city} onChange={event => change('city', event.target.value)} placeholder={c.city} />
             <input className="input" value={draft.address} onChange={event => change('address', event.target.value)} placeholder={c.address} />
             <select className="input" value={draft.deliveryPreference} onChange={event => change('deliveryPreference', event.target.value)}>
-              <option>Ünvana çatdırılma</option>
-              <option>Metroya çatdırılma</option>
+              <option>Wolt çatdırılma</option>
               <option>Mağazadan təhvil alma</option>
-              <option>Poçtla göndəriş</option>
+              
             </select>
             <input className="input" value={draft.petType} onChange={event => change('petType', event.target.value)} placeholder={c.petType} />
             <input className="input" value={draft.petName} onChange={event => change('petName', event.target.value)} placeholder={c.petName} />

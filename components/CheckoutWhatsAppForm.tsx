@@ -23,8 +23,8 @@ const labels = {
     total: 'Yekun',
     delivery: 'Sifariş üsulu',
     profileSaved: 'Məlumatlar brauzerdə saxlanılır, registrasiya lazım deyil.',
-    pickup: 'Mağazadan götürmək',
-    pickupMessage: 'Stokda varsa, gəlib mağazadan almaq istəyirəm.'
+    pickup: 'Wolt çatdırılma',
+    pickupMessage: 'Çatdırılma Wolt vasitəsilə həyata keçiriləcək.'
   },
   en: {
     saveProfile: 'Save details',
@@ -40,8 +40,8 @@ const labels = {
     total: 'Total',
     delivery: 'Order method',
     profileSaved: 'Details are saved in the browser; no registration required.',
-    pickup: 'Store pickup',
-    pickupMessage: 'If it is in stock, I would like to come and pick it up from the store.'
+    pickup: 'Wolt delivery',
+    pickupMessage: 'Delivery will be arranged via Wolt.'
   },
   ru: {
     saveProfile: 'Сохранить данные',
@@ -57,8 +57,8 @@ const labels = {
     total: 'Итого',
     delivery: 'Способ заказа',
     profileSaved: 'Данные сохраняются в браузере; регистрация не нужна.',
-    pickup: 'Самовывоз из магазина',
-    pickupMessage: 'Если товар есть в наличии, я хочу забрать его из магазина.'
+    pickup: 'Доставка Wolt',
+    pickupMessage: 'Доставка будет оформлена через Wolt.'
   }
 };
 

@@ -94,9 +94,7 @@ export function WhatsappOrderForm() {
               <input className="input" value={formProfile.city} onChange={event => change('city', event.target.value)} placeholder={t('city')} />
               <input className="input" value={formProfile.address} onChange={event => change('address', event.target.value)} placeholder={t('address')} />
               <select className="input" value={deliveryType} onChange={event => setDeliveryType(event.target.value)}>
-                <option>{t('metro')}</option>
                 <option>{t('addressDelivery')}</option>
-                <option>{t('postDelivery')}</option>
               </select>
               <textarea className="input" value={formProfile.note} onChange={event => change('note', event.target.value)} placeholder={t('note')} />
             </div>
