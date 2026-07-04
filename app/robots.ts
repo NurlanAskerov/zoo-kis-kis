@@ -1,6 +1,6 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
 
-const siteUrl = 'https://zookiskis.az';
+const siteUrl = 'https://www.zookiskis.az';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin', '/api']
+        disallow: ['/admin']
       }
     ],
     sitemap: `${siteUrl}/sitemap.xml`,

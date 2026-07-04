@@ -47,7 +47,7 @@ function safe(value?: string) {
 function productDetailUrl(slug: string, explicitUrl?: string) {
   if (explicitUrl?.startsWith('http')) return explicitUrl;
 
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://zoo-kis-kis.vercel.app').replace(/\/$/, '');
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.zookiskis.az').replace(/\/$/, '');
   const path = explicitUrl || `/products/${slug}`;
 
   return `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;

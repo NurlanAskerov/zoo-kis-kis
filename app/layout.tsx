@@ -9,41 +9,109 @@ import { CatalogProvider } from '@/components/CatalogProvider';
 import { CustomerProfileProvider } from '@/components/customer-profile';
 
 export const metadata: Metadata = {
-    metadataBase: new URL('https://zookiskis.az'),
-   title: {
-    default: 'Zoo Kis-Kis | Zooshop, pet shop və grooming xidməti',
+  metadataBase: new URL('https://www.zookiskis.az'),
+  title: {
+    default: 'Zoo Kis-Kis | Zooshop, Grooming və Wolt çatdırılma',
     template: '%s | Zoo Kis-Kis'
   },
-  description:
-    'Zoo Kis-Kis — it, pişik, quş, balıq və xomyaklar üçün yemlər, aksesuarlar, biotualetlər, oyuncaqlar, grooming və çatdırılma xidməti.',
+  description: 'Zoo Kis-Kis — Bakı üçün pet shop və grooming xidməti. Pişik, it, quş, balıq və gəmiricilər üçün yemlər, oyuncaqlar, baxım məhsulları və Wolt ilə çatdırılma.',
+  applicationName: 'Zoo Kis-Kis',
   keywords: [
-    'zooshop',
-    'zoo shop',
-    'pet shop',
-    'zoo mağaza',
+    'Zoo Kis-Kis',
+    'zookiskis',
+    'zookiskis.az',
+    'zoo kis kis',
+    'pet shop Bakı',
+    'zooshop Bakı',
     'heyvan mağazası',
-    'it yemi',
     'pişik yemi',
-    'pişik qumu',
-    'biotualet',
+    'it yemi',
+    'grooming Bakı',
     'heyvan məhsulları',
-    'grooming Bakı'
+    'Wolt çatdırılma'
   ],
-  verification: {
-    google: 'HN_bRPLQZFgaSw5Pj_b0pBR2O8Zq-oaS6qon9L59SI0'
-  },
-   openGraph: {
-    title: 'Zoo Kis-Kis | Zooshop & Grooming',
-    description:
-      'Sevimli dostlarınız üçün yemlər, aksesuarlar, oyuncaqlar, biotualetlər, grooming və çatdırılma xidməti.',
-    url: 'https://zookiskis.az',
-    siteName: 'Zoo Kis-Kis',
-    locale: 'az_AZ',
-    type: 'website'
-  },
+  authors: [{ name: 'Zoo Kis-Kis' }],
+  creator: 'Zoo Kis-Kis',
+  publisher: 'Zoo Kis-Kis',
+  category: 'pet supplies',
   alternates: {
-    canonical: 'https://zookiskis.az'
-  }
+    canonical: '/',
+    languages: {
+      az: '/',
+      en: '/?lang=en',
+      ru: '/?lang=ru'
+    }
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'az_AZ',
+    url: '/',
+    siteName: 'Zoo Kis-Kis',
+    title: 'Zoo Kis-Kis | Zooshop & Grooming',
+    description: 'Pişik, it, quş, balıq və gəmiricilər üçün yemlər, oyuncaqlar, baxım məhsulları, grooming və Wolt ilə çatdırılma.',
+    images: [
+      {
+        url: '/banners/zoo-kis-kis-store.webp',
+        width: 1200,
+        height: 630,
+        alt: 'Zoo Kis-Kis zooshop və pet məhsulları'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Zoo Kis-Kis | Zooshop & Grooming',
+    description: 'Pet shop, grooming və Wolt çatdırılma.',
+    images: ['/banners/zoo-kis-kis-store.webp']
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1
+    }
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.png', type: 'image/png', sizes: '512x512' }
+    ],
+    shortcut: ['/favicon.ico'],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }]
+  },
+  manifest: '/site.webmanifest'
+};
+
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'PetStore',
+  name: 'Zoo Kis-Kis',
+  url: 'https://www.zookiskis.az',
+  logo: 'https://www.zookiskis.az/favicon.png',
+  image: 'https://www.zookiskis.az/banners/zoo-kis-kis-store.webp',
+  telephone: '+994555047010',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Sulh kucesi 14c, Imeni Razina',
+    addressLocality: 'Bakı',
+    addressCountry: 'AZ'
+  },
+  openingHoursSpecification: [
+    {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      opens: '10:00',
+      closes: '22:00'
+    }
+  ],
+  sameAs: [
+    'https://www.instagram.com/zookiskis.az/',
+    'https://www.tiktok.com/@zookiskis'
+  ]
 };
 
 export const dynamic = 'force-dynamic';
@@ -61,6 +129,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="az">
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
         <LanguageProvider>
           <CatalogProvider>
             <CustomerProfileProvider>

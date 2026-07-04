@@ -1,5 +1,12 @@
 import { ProductFilters } from '@/components/ProductFilters';
 import { ProductsIntro } from '@/components/ProductsIntro';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Məhsullar',
+  description: 'Zoo Kis-Kis məhsul kataloqu: pişik, it, quş, balıq və gəmiricilər üçün yemlər, oyuncaqlar, aksesuarlar və baxım məhsulları.',
+  alternates: { canonical: '/products' }
+};
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

@@ -1,33 +1,26 @@
-import { MetadataRoute } from 'next';
-import { getProductsFromDb } from '@/lib/db';
+import type { MetadataRoute } from 'next';
+import { products } from '@/lib/data';
 
-const siteUrl = 'https://zookiskis.az';
+const siteUrl = 'https://www.zookiskis.az';
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  let productPages: MetadataRoute.Sitemap = [];
+export default function sitemap(): MetadataRoute.Sitemap {
+  const now = new Date();
 
-  try {
-    const products = await getProductsFromDb(false);
+  const staticRoutes = ['', '/products', '/grooming', '/delivery', '/about', '/contact'].map(path => ({
+    url: `${siteUrl}${path}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: path === '' ? 1 : 0.8
+  }));
 
-    productPages = products.map(product => ({
+  const productRoutes = products
+    .filter(product => product.active !== false)
+    .map(product => ({
       url: `${siteUrl}/products/${product.slug}`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.85
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.7
     }));
-  } catch {
-    productPages = [];
-  }
 
-  const staticPages: MetadataRoute.Sitemap = [
-    { url: siteUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: `${siteUrl}/products`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
-    { url: `${siteUrl}/grooming`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
-    { url: `${siteUrl}/delivery`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.65 },
-    { url: `${siteUrl}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.65 },
-    { url: `${siteUrl}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.65 },
-    { url: `${siteUrl}/privacy-policy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.35 }
-  ];
-
-  return [...staticPages, ...productPages];
+  return [...staticRoutes, ...productRoutes];
 }
