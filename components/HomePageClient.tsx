@@ -269,7 +269,7 @@ export function HomePageClient() {
     {
       id: 'grooming',
       image: '/banners/zoo-kis-kis-grooming.webp',
-      mobileImage: '/banners/zoo-kis-kis-grooming-mobile-generated.webps',
+      mobileImage: '/banners/zoo-kis-kis-grooming-mobile-generated.webp',
       alt: 'Zoo Kis-Kis grooming banneri',
       variant: 'grooming' as const,
       copy: copy.grooming
