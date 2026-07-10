@@ -202,6 +202,24 @@ function saveCustomFilters(filters: AdminCustomFilters) {
   window.localStorage.setItem('zoo-kis-kis-admin-custom-filters', JSON.stringify(filters));
 }
 
+async function saveCustomFiltersToServer(filters: AdminCustomFilters) {
+  saveCustomFilters(filters);
+
+  const response = await fetch('/api/admin/custom-filters', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filters)
+  }).catch(() => null);
+
+  if (!response?.ok) return filters;
+
+  const data = await response.json().catch(() => ({})) as { filters?: AdminCustomFilters };
+  const serverFilters = data.filters ?? filters;
+  saveCustomFilters(serverFilters);
+
+  return serverFilters;
+}
+
 
 function createVariantFormRow(): ProductVariantFormRow {
   return {
@@ -302,7 +320,7 @@ function resolveBadge(form: ProductForm) {
   };
 }
 
-function formToProduct(form: ProductForm, baseProduct?: Product | null): Product {
+function formToProduct(form: ProductForm, baseProduct?: Product | null, customFilters?: AdminCustomFilters): Product {
   const imageList = form.imagesText.split('\n').map(item => item.trim()).filter(Boolean);
   const image = form.image.trim() || imageList[0] || '/products/cat-food.svg';
   const nameAz = form.nameAz.trim() || 'Yeni məhsul';
@@ -310,6 +328,8 @@ function formToProduct(form: ProductForm, baseProduct?: Product | null): Product
   const slug = baseProduct?.slug || slugify(nameAz);
   const variants = form.variantsEnabled ? variantsFromFormRows(form.variants) : [];
   const firstVariantPrice = variants[0]?.price;
+  const customSubcategory = customFilters?.subcategories.find(subcategory => subcategory.key === form.typeKey);
+  const customDepartment = customFilters?.departments.find(department => department.key === (customSubcategory?.departmentKey || form.categoryKey));
 
   return {
     id: baseProduct?.id || slug,
@@ -321,6 +341,8 @@ function formToProduct(form: ProductForm, baseProduct?: Product | null): Product
     },
     categoryKey: form.categoryKey || categoryKeyFromType(form.typeKey),
     typeKey: form.typeKey,
+    customDepartmentLabel: customDepartment?.label,
+    customTypeLabel: customSubcategory?.label,
     audiences: form.audiences.length ? form.audiences : ['allPets'],
     collections: form.collections,
     price: Number(form.price || firstVariantPrice || 0),
@@ -615,10 +637,21 @@ export default function AdminPage() {
   const totalInactiveProducts = useMemo(() => adminProducts.filter(product => product.active === false).length, [adminProducts]);
 
   function changeDepartment(department: string) {
+    const staticFirstSubcategory = getSubcategoryOptionsForDepartment(department as ProductDepartmentKey)[0]?.key;
     const customFirstSubcategory = customFilters.subcategories.find(subcategory => subcategory.departmentKey === department)?.key as ProductTypeKey | undefined;
-    const firstSubcategory = getSubcategoryOptionsForDepartment(department as ProductDepartmentKey)[0]?.key ?? customFirstSubcategory ?? 'dryFood';
-    setForm({ ...form, typeKey: firstSubcategory, categoryKey: categoryKeyFromType(firstSubcategory) || department });
+    const firstSubcategory = staticFirstSubcategory ?? customFirstSubcategory;
     setFilterForm(current => ({ ...current, subDepartmentKey: department }));
+
+    if (firstSubcategory) {
+      setForm(current => ({
+        ...current,
+        typeKey: firstSubcategory,
+        categoryKey: staticFirstSubcategory ? categoryKeyFromType(firstSubcategory) : department
+      }));
+      return;
+    }
+
+    setForm(current => ({ ...current, categoryKey: department }));
   }
 
   function changeSubcategory(typeKey: ProductTypeKey) {
@@ -634,7 +667,7 @@ export default function AdminPage() {
     return customFilters.subcategories.find(subcategory => subcategory.key === typeKey)?.label[lang] || getProductTypeLabel(typeKey, lang);
   }
 
-  function addCustomDepartment() {
+  async function addCustomDepartment() {
     const label = localizedFromAdminInputs(filterForm.departmentAz, filterForm.departmentEn, filterForm.departmentRu);
     if (!label.az) {
       setMessage('Bölmə adı AZ/EN/RU sahələrindən ən azı birində yazılmalıdır.');
@@ -642,20 +675,30 @@ export default function AdminPage() {
     }
 
     const key = slugifyAdminOption(label.az, 'custom-section');
+    const defaultSubcategoryKey = slugifyAdminOption(`${key}-${label.az}`, 'custom-sub');
+    const nextDepartments = customFilters.departments.some(department => department.key === key)
+      ? customFilters.departments
+      : [...customFilters.departments, { key, label }];
+
+    const nextSubcategories = customFilters.subcategories.some(subcategory => subcategory.departmentKey === key)
+      ? customFilters.subcategories
+      : [...customFilters.subcategories, { key: defaultSubcategoryKey, departmentKey: key, label }];
+
     const nextFilters = {
-      ...customFilters,
-      departments: customFilters.departments.some(department => department.key === key)
-        ? customFilters.departments
-        : [...customFilters.departments, { key, label }]
+      departments: nextDepartments,
+      subcategories: nextSubcategories
     };
 
     setCustomFilters(nextFilters);
-    saveCustomFilters(nextFilters);
     setFilterForm(current => ({ ...current, departmentAz: '', departmentEn: '', departmentRu: '', subDepartmentKey: key }));
-    setMessage('Yeni bölmə əlavə edildi. İndi bu bölməyə alt bölmə əlavə edə bilərsiniz.');
+    setForm(current => ({ ...current, typeKey: defaultSubcategoryKey as ProductTypeKey, categoryKey: key }));
+
+    const savedFilters = await saveCustomFiltersToServer(nextFilters);
+    setCustomFilters(savedFilters);
+    setMessage('Yeni bölmə bazaya yazıldı və məhsul formasında seçildi.');
   }
 
-  function addCustomSubcategory() {
+  async function addCustomSubcategory() {
     const label = localizedFromAdminInputs(filterForm.subAz, filterForm.subEn, filterForm.subRu);
     if (!label.az) {
       setMessage('Alt bölmə adı AZ/EN/RU sahələrindən ən azı birində yazılmalıdır.');
@@ -672,10 +715,12 @@ export default function AdminPage() {
     };
 
     setCustomFilters(nextFilters);
-    saveCustomFilters(nextFilters);
-    setFilterForm(current => ({ ...current, subAz: '', subEn: '', subRu: '' }));
+    setFilterForm(current => ({ ...current, subAz: '', subEn: '', subRu: '', subDepartmentKey: departmentKey }));
     setForm(current => ({ ...current, typeKey: key as ProductTypeKey, categoryKey: departmentKey }));
-    setMessage('Yeni alt bölmə əlavə edildi və məhsul formasında seçildi.');
+
+    const savedFilters = await saveCustomFiltersToServer(nextFilters);
+    setCustomFilters(savedFilters);
+    setMessage('Yeni alt bölmə bazaya yazıldı və məhsul formasında seçildi.');
   }
 
   function updateVariantRow(id: string, patch: Partial<ProductVariantFormRow>) {
@@ -696,7 +741,7 @@ export default function AdminPage() {
     });
   }
 
-  const previewProduct = useMemo(() => formToProduct(form, editingProduct), [form, editingProduct]);
+  const previewProduct = useMemo(() => formToProduct(form, editingProduct, customFilters), [form, editingProduct, customFilters]);
 
   async function checkSession() {
     const response = await fetch('/api/admin/me', { cache: 'no-store' }).catch(() => null);
@@ -710,6 +755,29 @@ export default function AdminPage() {
   }
 
 
+  async function loadAdminCustomFilters() {
+    const localFilters = loadCustomFilters();
+    setCustomFilters(localFilters);
+
+    const response = await fetch('/api/admin/custom-filters', { cache: 'no-store' }).catch(() => null);
+    if (!response?.ok) {
+      setFilterForm(current => ({ ...current, subDepartmentKey: localFilters.departments[0]?.key || current.subDepartmentKey }));
+      return;
+    }
+
+    const data = await response.json().catch(() => ({ filters: localFilters })) as { filters?: AdminCustomFilters };
+    const serverFilters = data.filters ?? emptyCustomFilters;
+    const localHasFilters = Boolean(localFilters.departments.length || localFilters.subcategories.length);
+    const serverHasFilters = Boolean(serverFilters.departments.length || serverFilters.subcategories.length);
+    const filters = !serverHasFilters && localHasFilters
+      ? await saveCustomFiltersToServer(localFilters)
+      : serverFilters;
+
+    setCustomFilters(filters);
+    saveCustomFilters(filters);
+    setFilterForm(current => ({ ...current, subDepartmentKey: filters.departments[0]?.key || localFilters.departments[0]?.key || current.subDepartmentKey }));
+  }
+
   async function loadAdminProducts() {
     const response = await fetch('/api/products?includeInactive=1', { cache: 'no-store' }).catch(() => null);
     if (!response?.ok) return;
@@ -721,9 +789,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     checkSession();
-    const storedFilters = loadCustomFilters();
-    setCustomFilters(storedFilters);
-    setFilterForm(current => ({ ...current, subDepartmentKey: storedFilters.departments[0]?.key || current.subDepartmentKey }));
+    void loadAdminCustomFilters();
   }, []);
 
   async function login(event: FormEvent) {
@@ -740,6 +806,7 @@ export default function AdminPage() {
     }
     setLoggedIn(true);
     setPassword('');
+    await loadAdminCustomFilters();
     await refreshProducts();
     await loadAdminProducts();
     setAdminTab('active');
@@ -851,8 +918,14 @@ export default function AdminPage() {
 
   function startEditProduct(product: Product) {
     const nextForm = productToForm(product);
+    const customSubcategory = customFilters.subcategories.find(subcategory => subcategory.key === nextForm.typeKey);
+    if (customSubcategory) {
+      nextForm.categoryKey = customSubcategory.departmentKey;
+    }
+
     const images = nextForm.imagesText.split('\n').map(item => item.trim()).filter(Boolean);
     setEditingProduct(product);
+    setFilterForm(current => ({ ...current, subDepartmentKey: customSubcategory?.departmentKey || nextForm.categoryKey || current.subDepartmentKey }));
     setForm(nextForm);
     setImageSlots(imageSlotsFromUrls(images, `edit-${product.slug}`));
     setMessage('');
@@ -872,7 +945,7 @@ export default function AdminPage() {
 
     setSaving(true);
     setMessage('');
-    const product = formToProduct(form, editingProduct);
+    const product = formToProduct(form, editingProduct, customFilters);
 
     if (!editingProduct) {
       const uniqueSlug = makeUniqueSlug(product.slug, adminProducts);
@@ -1181,8 +1254,8 @@ export default function AdminPage() {
                     <select className="input" value={selectedDepartment} onChange={event => changeDepartment(event.target.value)} aria-label={t('department')}>
                       {adminDepartmentOptions.map(department => <option value={department.key} key={department.key}>{department.label[lang]}</option>)}
                     </select>
-                    <select className="input" value={form.typeKey} onChange={event => changeSubcategory(event.target.value as ProductTypeKey)} aria-label={t('subcategory')}>
-                      {adminSubcategoryOptions.map(type => <option value={type.key} key={type.key}>{type.label[lang]}</option>)}
+                    <select className="input" value={adminSubcategoryOptions.some(type => type.key === form.typeKey) ? form.typeKey : ''} onChange={event => changeSubcategory(event.target.value as ProductTypeKey)} aria-label={t('subcategory')} disabled={!adminSubcategoryOptions.length}>
+                      {adminSubcategoryOptions.length ? adminSubcategoryOptions.map(type => <option value={type.key} key={type.key}>{type.label[lang]}</option>) : <option value="">Əvvəl alt bölmə əlavə edin</option>}
                     </select>
                   </div>
 

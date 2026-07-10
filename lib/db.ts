@@ -14,6 +14,27 @@ import {
 let cachedClient: ReturnType<typeof createClient> | null = null;
 let cachedSchemaMode: 'wide' | 'legacy' | null = null;
 
+export type AdminCustomFilterOption = {
+  key: string;
+  label: Record<Lang, string>;
+};
+
+export type AdminCustomSubcategoryOption = {
+  key: string;
+  departmentKey: string;
+  label: Record<Lang, string>;
+};
+
+export type AdminCustomFilters = {
+  departments: AdminCustomFilterOption[];
+  subcategories: AdminCustomSubcategoryOption[];
+};
+
+const emptyAdminCustomFilters: AdminCustomFilters = {
+  departments: [],
+  subcategories: []
+};
+
 const langs: Lang[] = ['az', 'en', 'ru'];
 const validProductTypes = new Set<ProductTypeKey>([
   'dryFood',
@@ -34,6 +55,11 @@ const validProductTypes = new Set<ProductTypeKey>([
 const validAudiences = new Set<AudienceKey>(['cats', 'dogs', 'birds', 'fish', 'hamsters', 'allPets']);
 const validCollections = new Set<ProductCollectionKey>(['discount', 'popular', 'new']);
 const validStocks = new Set<StockKey>(['inStock', 'lowStock', 'preOrder']);
+
+function isCustomProductType(value: unknown) {
+  const raw = String(value || '').trim();
+  return raw.startsWith('custom-sub-');
+}
 
 const hiddenProductionDetailPhrases = [
   'admin paneldən əlavə olunub',
@@ -183,6 +209,44 @@ export function clearProductRuntimeCache() {
   publicProductBySlugRuntimeCache.clear();
 }
 
+function cleanCustomLabel(value: unknown): Record<Lang, string> {
+  const raw = value && typeof value === 'object' ? value as Partial<Record<Lang, unknown>> : {};
+  const fallback = String(raw.az || raw.en || raw.ru || '').trim();
+
+  return {
+    az: String(raw.az || fallback).trim() || fallback,
+    en: String(raw.en || fallback).trim() || fallback,
+    ru: String(raw.ru || fallback).trim() || fallback
+  };
+}
+
+function cleanCustomFilters(input: unknown): AdminCustomFilters {
+  const raw = input && typeof input === 'object' ? input as Partial<AdminCustomFilters> : {};
+
+  const departments = Array.isArray(raw.departments)
+    ? raw.departments
+      .map(item => {
+        const key = String(item?.key || '').trim();
+        const label = cleanCustomLabel(item?.label);
+        return key && label.az ? { key, label } : null;
+      })
+      .filter((item): item is AdminCustomFilterOption => Boolean(item))
+    : [];
+
+  const subcategories = Array.isArray(raw.subcategories)
+    ? raw.subcategories
+      .map(item => {
+        const key = String(item?.key || '').trim();
+        const departmentKey = String(item?.departmentKey || '').trim();
+        const label = cleanCustomLabel(item?.label);
+        return key && departmentKey && label.az ? { key, departmentKey, label } : null;
+      })
+      .filter((item): item is AdminCustomSubcategoryOption => Boolean(item))
+    : [];
+
+  return { departments, subcategories };
+}
+
 export function hasDatabaseConfig() {
   return Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
 }
@@ -284,7 +348,28 @@ export const createTablesSql = [
     tag TEXT NOT NULL,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_products_active ON products(active)`,
+  `CREATE TABLE IF NOT EXISTS admin_departments (
+    key TEXT PRIMARY KEY,
+    label_az TEXT NOT NULL,
+    label_en TEXT NOT NULL,
+    label_ru TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS admin_subcategories (
+    key TEXT PRIMARY KEY,
+    department_key TEXT NOT NULL,
+    label_az TEXT NOT NULL,
+    label_en TEXT NOT NULL,
+    label_ru TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (department_key) REFERENCES admin_departments(key) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_admin_subcategories_department_key ON admin_subcategories(department_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_products_active ON products(active)`, 
   `CREATE INDEX IF NOT EXISTS idx_products_audience ON products(audience)`,
   `CREATE INDEX IF NOT EXISTS idx_products_department ON products(department)`,
   `CREATE INDEX IF NOT EXISTS idx_products_subcategory ON products(subcategory)`,
@@ -308,6 +393,86 @@ export async function ensureDatabase() {
 
   cachedSchemaMode = 'wide';
   return true;
+}
+
+export async function getCustomFiltersFromDb(): Promise<AdminCustomFilters> {
+  if (!hasDatabaseConfig()) return emptyAdminCustomFilters;
+
+  await ensureDatabase();
+
+  const departmentsResult = await getTursoClient().execute(
+    'SELECT key, label_az, label_en, label_ru FROM admin_departments ORDER BY sort_order ASC, key ASC'
+  );
+  const subcategoriesResult = await getTursoClient().execute(
+    'SELECT key, department_key, label_az, label_en, label_ru FROM admin_subcategories ORDER BY sort_order ASC, key ASC'
+  );
+
+  return {
+    departments: departmentsResult.rows
+      .map(row => {
+        const item = row as Record<string, unknown>;
+        const key = String(item.key || '').trim();
+        const label = {
+          az: String(item.label_az || '').trim(),
+          en: String(item.label_en || item.label_az || '').trim(),
+          ru: String(item.label_ru || item.label_az || '').trim()
+        };
+        return key && label.az ? { key, label } : null;
+      })
+      .filter((item): item is AdminCustomFilterOption => Boolean(item)),
+    subcategories: subcategoriesResult.rows
+      .map(row => {
+        const item = row as Record<string, unknown>;
+        const key = String(item.key || '').trim();
+        const departmentKey = String(item.department_key || '').trim();
+        const label = {
+          az: String(item.label_az || '').trim(),
+          en: String(item.label_en || item.label_az || '').trim(),
+          ru: String(item.label_ru || item.label_az || '').trim()
+        };
+        return key && departmentKey && label.az ? { key, departmentKey, label } : null;
+      })
+      .filter((item): item is AdminCustomSubcategoryOption => Boolean(item))
+  };
+}
+
+export async function upsertCustomFiltersToDb(filters: AdminCustomFilters): Promise<AdminCustomFilters> {
+  const cleanFilters = cleanCustomFilters(filters);
+
+  if (!hasDatabaseConfig()) return cleanFilters;
+
+  await ensureDatabase();
+
+  for (const [index, department] of cleanFilters.departments.entries()) {
+    await getTursoClient().execute({
+      sql: `INSERT INTO admin_departments (key, label_az, label_en, label_ru, sort_order, updated_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+              label_az = excluded.label_az,
+              label_en = excluded.label_en,
+              label_ru = excluded.label_ru,
+              sort_order = excluded.sort_order,
+              updated_at = CURRENT_TIMESTAMP`,
+      args: [department.key, department.label.az, department.label.en, department.label.ru, index]
+    });
+  }
+
+  for (const [index, subcategory] of cleanFilters.subcategories.entries()) {
+    await getTursoClient().execute({
+      sql: `INSERT INTO admin_subcategories (key, department_key, label_az, label_en, label_ru, sort_order, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+              department_key = excluded.department_key,
+              label_az = excluded.label_az,
+              label_en = excluded.label_en,
+              label_ru = excluded.label_ru,
+              sort_order = excluded.sort_order,
+              updated_at = CURRENT_TIMESTAMP`,
+      args: [subcategory.key, subcategory.departmentKey, subcategory.label.az, subcategory.label.en, subcategory.label.ru, index]
+    });
+  }
+
+  return getCustomFiltersFromDb();
 }
 
 async function tableColumns(table: string) {
@@ -411,8 +576,8 @@ function stockToDb(value: StockKey) {
 }
 
 function typeFromDb(value: unknown): ProductTypeKey {
-  const raw = String(value || 'care');
-  if (validProductTypes.has(raw as ProductTypeKey)) return raw as ProductTypeKey;
+  const raw = String(value || 'care').trim();
+  if (validProductTypes.has(raw as ProductTypeKey) || isCustomProductType(raw)) return raw as ProductTypeKey;
 
   const map: Record<string, ProductTypeKey> = {
     'dry-food': 'dryFood',
@@ -493,7 +658,8 @@ export function normalizeProduct(input: Partial<Product>): Product {
     .replace(/^-+|-+$/g, '') || `product-${Date.now()}`;
 
   const image = input.image || input.images?.[0] || '/products/cat-food.svg';
-  const typeKey = validProductTypes.has(input.typeKey as ProductTypeKey) ? input.typeKey as ProductTypeKey : fallback.typeKey;
+  const rawTypeKey = String(input.typeKey || fallback.typeKey).trim() as ProductTypeKey;
+  const typeKey = validProductTypes.has(rawTypeKey) || isCustomProductType(rawTypeKey) ? rawTypeKey : fallback.typeKey;
 
   const normalizedAudiences: AudienceKey[] = (input.audiences ?? [])
     .filter((item): item is AudienceKey => validAudiences.has(item as AudienceKey));
@@ -507,8 +673,10 @@ export function normalizeProduct(input: Partial<Product>): Product {
     id: input.id || slug,
     slug,
     name: input.name ?? { az: nameAz, en: nameAz, ru: nameAz },
-    categoryKey: input.categoryKey || categoryKeyFromType(typeKey),
+    categoryKey: String(input.categoryKey || '').trim() || categoryKeyFromType(typeKey),
     typeKey,
+    customDepartmentLabel: input.customDepartmentLabel,
+    customTypeLabel: input.customTypeLabel,
     audiences: normalizedAudiences.length ? normalizedAudiences : ['allPets'],
     collections: normalizedCollections,
     price: Number(input.price || normalizedVariants?.[0]?.price || 0),
@@ -582,8 +750,10 @@ function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<st
     id: String(row.id || row.slug),
     slug: getString(row, 'slug') || slugify(getString(row, 'name_az')),
     name: localized(row.name_az, row.name_en, row.name_ru),
-    categoryKey: categoryKeyFromType(typeKey),
+    categoryKey: String(extra.categoryKey || '').trim() || String(row.department || '').trim() || categoryKeyFromType(typeKey),
     typeKey,
+    customDepartmentLabel: extra.customDepartmentLabel as Product['customDepartmentLabel'] | undefined,
+    customTypeLabel: extra.customTypeLabel as Product['customTypeLabel'] | undefined,
     audiences: parseAudiences(row.audience),
     collections: collectionsFromRow(row),
     price: Number(row.price || 0),
@@ -706,11 +876,13 @@ export async function upsertProduct(product: Product) {
 
   const normalized = normalizeProduct(product);
   const productId = normalized.slug;
-  const department = getDepartmentForProductType(normalized.typeKey);
+  const department = isCustomProductType(normalized.typeKey) ? normalized.categoryKey : getDepartmentForProductType(normalized.typeKey);
   const collections = normalized.collections ?? [];
   const badge = normalized.badge ?? { az: '', en: '', ru: '' };
   const extra = {
     categoryKey: normalized.categoryKey,
+    customDepartmentLabel: normalized.customDepartmentLabel,
+    customTypeLabel: normalized.customTypeLabel,
     collections,
     details: normalized.details,
     variants: normalized.variants ?? []

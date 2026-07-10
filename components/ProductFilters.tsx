@@ -19,6 +19,7 @@ import {
 import { useCatalog } from './CatalogProvider';
 import { ProductCard } from './ProductCard';
 import { useLanguage } from './LanguageProvider';
+import { useCustomFilters, type ClientCustomFilters } from './useCustomFilters';
 
 type FilterValue<T extends string> = 'all' | T;
 
@@ -31,8 +32,8 @@ type ProductFiltersProps = {
 };
 
 const validAudience = (value?: string): FilterValue<AudienceKey> => audienceOptions.some(item => item.key === value) ? value as AudienceKey : 'all';
-const validSubcategory = (value?: string): FilterValue<ProductTypeKey> => productTypeOptions.some(item => item.key === value) ? value as ProductTypeKey : 'all';
-const validDepartment = (value?: string): FilterValue<ProductDepartmentKey> => productDepartmentOptions.some(item => item.key === value) ? value as ProductDepartmentKey : 'all';
+const validSubcategory = (value?: string): FilterValue<ProductTypeKey> => value?.trim() ? value.trim() as ProductTypeKey : 'all';
+const validDepartment = (value?: string): FilterValue<ProductDepartmentKey> => value?.trim() ? value.trim() as ProductDepartmentKey : 'all';
 const validCollection = (value?: string): FilterValue<ProductCollectionKey> => collectionOptions.some(item => item.key === value) ? value as ProductCollectionKey : 'all';
 
 const normalizeSearchText = (value: string) => value
@@ -92,12 +93,104 @@ const productSearchScore = (product: SearchableProductName, query: string, lang:
 };
 
 
-export function ProductFilters({ initialAudience, initialType, initialDepartment, initialCollection }: ProductFiltersProps) {
+function cleanCustomLabel(value: string) {
+  return value
+    .replace(/^custom-section-/i, '')
+    .replace(/^custom-sub-/i, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function titleCase(value: string) {
+  return value
+    .split(' ')
+    .map(word => word ? word[0].toLocaleUpperCase('az-AZ') + word.slice(1) : word)
+    .join(' ');
+}
+
+function fallbackDepartmentLabel(key: string, lang: Lang) {
+  const clean = cleanCustomLabel(key);
+  if (!clean) {
+    if (lang === 'ru') return 'Новый раздел';
+    if (lang === 'en') return 'New section';
+    return 'Yeni bölmə';
+  }
+  return titleCase(clean);
+}
+
+function fallbackSubcategoryLabel(key: string, lang: Lang) {
+  const clean = cleanCustomLabel(key);
+  if (!clean) {
+    if (lang === 'ru') return 'Новый подраздел';
+    if (lang === 'en') return 'New subsection';
+    return 'Yeni alt bölmə';
+  }
+  return titleCase(clean);
+}
+
+function productDepartmentKey(product: Product) {
+  return productDepartmentOptions.find(department => department.subcategories.includes(product.typeKey))?.key
+    || product.categoryKey
+    || getDepartmentForProductType(product.typeKey);
+}
+
+function buildDepartmentOptions(products: Product[], customFilters: ClientCustomFilters, lang: Lang) {
+  const map = new Map<string, { key: string; label: Record<Lang, string> }>();
+
+  productDepartmentOptions.forEach(department => {
+    map.set(department.key, { key: department.key, label: department.label });
+  });
+
+  customFilters.departments.forEach(department => {
+    map.set(department.key, { key: department.key, label: department.label });
+  });
+
+  products.forEach(product => {
+    const key = productDepartmentKey(product);
+    if (!key || map.has(key)) return;
+    const labelObj = product.customDepartmentLabel;
+    const label = labelObj?.[lang] || labelObj?.az || fallbackDepartmentLabel(key, lang);
+    map.set(key, { key, label: labelObj || { az: label, en: label, ru: label } });
+  });
+
+  return Array.from(map.values());
+}
+
+function buildSubcategoryOptions(products: Product[], customFilters: ClientCustomFilters, department: string, lang: Lang) {
+  const staticOptions = getSubcategoryOptionsForDepartment(department as ProductDepartmentKey);
+  const map = new Map<string, { key: ProductTypeKey; label: Record<Lang, string> }>();
+
+  staticOptions.forEach(item => map.set(item.key, item));
+
+  customFilters.subcategories
+    .filter(item => item.departmentKey === department)
+    .forEach(item => map.set(item.key as ProductTypeKey, { key: item.key as ProductTypeKey, label: item.label }));
+
+  products.forEach(product => {
+    if (productDepartmentKey(product) !== department) return;
+    if (map.has(product.typeKey)) return;
+
+    const labelObj = product.customTypeLabel;
+    const label = labelObj?.[lang] || labelObj?.az || fallbackSubcategoryLabel(product.typeKey, lang);
+    map.set(product.typeKey, { key: product.typeKey, label: labelObj || { az: label, en: label, ru: label } });
+  });
+
+  return Array.from(map.values());
+}
+
+
+export function ProductFilters({ initialAudience, initialType, initialCategory, initialDepartment, initialCollection }: ProductFiltersProps) {
   const { t, lang } = useLanguage();
   const { products, loading } = useCatalog();
+  const customFilters = useCustomFilters();
 
   const initialSubcategory = validSubcategory(initialType);
-  const inferredDepartment = initialSubcategory === 'all' ? validDepartment(initialDepartment) : getDepartmentForProductType(initialSubcategory);
+  const requestedDepartment = initialDepartment || initialCategory;
+  const customSubcategory = customFilters.subcategories.find(item => item.key === initialSubcategory);
+  const inferredDepartment = initialSubcategory === 'all'
+    ? validDepartment(requestedDepartment)
+    : customSubcategory?.departmentKey || getDepartmentForProductType(initialSubcategory);
 
   const [audience, setAudience] = useState<FilterValue<AudienceKey>>(validAudience(initialAudience));
   const [department, setDepartment] = useState<FilterValue<ProductDepartmentKey>>(inferredDepartment);
@@ -111,7 +204,8 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
     setMounted(true);
   }, []);
 
-  const subcategoryOptions = useMemo(() => getSubcategoryOptionsForDepartment(department), [department]);
+  const departmentOptions = useMemo(() => buildDepartmentOptions(products, customFilters, lang), [products, customFilters, lang]);
+  const subcategoryOptions = useMemo(() => buildSubcategoryOptions(products, customFilters, department, lang), [products, customFilters, department, lang]);
 
   useEffect(() => {
     if (subcategory === 'all') return;
@@ -131,7 +225,7 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
 
         const bySearch = !query || searchScore >= 0;
         const byAudience = audience === 'all' || audience === 'allPets' || audiences.includes(audience) || audiences.includes('allPets');
-        const byDepartment = department === 'all' || getDepartmentForProductType(product.typeKey) === department;
+        const byDepartment = department === 'all' || productDepartmentKey(product) === department;
         const bySubcategory = subcategory === 'all' || product.typeKey === subcategory;
         const byCollection = collection === 'all' || collections.includes(collection);
 
@@ -150,8 +244,8 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
   };
 
   const audienceLabel = audience === 'all' ? '' : audienceOptions.find(item => item.key === audience)?.label[lang] ?? '';
-  const departmentLabel = department === 'all' ? '' : productDepartmentOptions.find(item => item.key === department)?.label[lang] ?? '';
-  const subcategoryLabel = subcategory === 'all' ? '' : productTypeOptions.find(item => item.key === subcategory)?.label[lang] ?? '';
+  const departmentLabel = department === 'all' ? '' : departmentOptions.find(item => item.key === department)?.label[lang] ?? fallbackDepartmentLabel(department, lang);
+  const subcategoryLabel = subcategory === 'all' ? '' : subcategoryOptions.find(item => item.key === subcategory)?.label[lang] ?? fallbackSubcategoryLabel(subcategory, lang);
   const collectionLabel = collection === 'all' ? '' : collectionOptions.find(item => item.key === collection)?.label[lang] ?? '';
   const queryLabel = search.trim();
   const activeLabels = [audienceLabel, subcategoryLabel || departmentLabel, collectionLabel, queryLabel ? `“${queryLabel}”` : ''].filter(Boolean);
@@ -175,7 +269,7 @@ export function ProductFilters({ initialAudience, initialType, initialDepartment
         <label>{t('department')}</label>
         <select className="input" value={department} onChange={event => handleDepartmentChange(event.target.value as FilterValue<ProductDepartmentKey>)}>
           <option value="all">{t('all')}</option>
-          {productDepartmentOptions.map(item => <option value={item.key} key={item.key}>{item.label[lang]}</option>)}
+          {departmentOptions.map(item => <option value={item.key} key={item.key}>{item.label[lang]}</option>)}
         </select>
       </div>
       <div className="filter-group">

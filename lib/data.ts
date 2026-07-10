@@ -28,6 +28,8 @@ export type Product = {
   name: LocalizedText;
   categoryKey: string;
   typeKey: ProductTypeKey;
+  customDepartmentLabel?: LocalizedText;
+  customTypeLabel?: LocalizedText;
   audiences: AudienceKey[];
   collections: ProductCollectionKey[];
   price: number;
