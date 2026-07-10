@@ -22,9 +22,6 @@ const emptyCustomFilters: ClientCustomFilters = {
   subcategories: []
 };
 
-let cachedCustomFilters: ClientCustomFilters | null = null;
-let pendingCustomFilters: Promise<ClientCustomFilters> | null = null;
-
 function cleanFilters(input: unknown): ClientCustomFilters {
   const raw = input && typeof input === 'object' ? input as Partial<ClientCustomFilters> : {};
 
@@ -74,7 +71,7 @@ function cleanFilters(input: unknown): ClientCustomFilters {
 }
 
 async function fetchCustomFilters() {
-  const response = await fetch('/api/custom-filters', { cache: 'no-store' });
+  const response = await fetch(`/api/custom-filters?ts=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) return emptyCustomFilters;
 
   const data = await response.json().catch(() => ({})) as { filters?: ClientCustomFilters };
@@ -82,27 +79,18 @@ async function fetchCustomFilters() {
 }
 
 export function useCustomFilters() {
-  const [filters, setFilters] = useState<ClientCustomFilters>(cachedCustomFilters ?? emptyCustomFilters);
+  const [filters, setFilters] = useState<ClientCustomFilters>(emptyCustomFilters);
 
   useEffect(() => {
     let mounted = true;
 
-    if (!pendingCustomFilters) {
-      pendingCustomFilters = fetchCustomFilters()
-        .then(result => {
-          cachedCustomFilters = result;
-          return result;
-        })
-        .finally(() => {
-          pendingCustomFilters = null;
-        });
-    }
-
-    pendingCustomFilters.then(result => {
-      if (mounted) setFilters(result);
-    }).catch(() => {
-      if (mounted) setFilters(cachedCustomFilters ?? emptyCustomFilters);
-    });
+    fetchCustomFilters()
+      .then(result => {
+        if (mounted) setFilters(result);
+      })
+      .catch(() => {
+        if (mounted) setFilters(emptyCustomFilters);
+      });
 
     return () => {
       mounted = false;

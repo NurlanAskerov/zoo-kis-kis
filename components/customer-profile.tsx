@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 export type CustomerProfile = {
   fullName: string;
@@ -31,28 +31,15 @@ const emptyProfile: CustomerProfile = {
   petName: ''
 };
 
-const storageKey = 'zoo-kis-kis-customer-profile';
 const CustomerProfileContext = createContext<CustomerProfileContextValue | null>(null);
 
-function readProfile() {
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    return raw ? { ...emptyProfile, ...JSON.parse(raw) } as CustomerProfile : emptyProfile;
-  } catch {
-    return emptyProfile;
-  }
-}
 
 export function CustomerProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<CustomerProfile>(emptyProfile);
 
-  useEffect(() => {
-    setProfileState(readProfile());
-  }, []);
 
   function setProfile(next: CustomerProfile) {
     setProfileState(next);
-    window.localStorage.setItem(storageKey, JSON.stringify(next));
   }
 
   function updateProfile(patch: Partial<CustomerProfile>) {

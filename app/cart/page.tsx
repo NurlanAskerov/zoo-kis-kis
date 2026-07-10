@@ -4,12 +4,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useCart } from '@/components/cart-context';
+import { useCatalog } from '@/components/CatalogProvider';
 import { useLanguage } from '@/components/LanguageProvider';
-import { getCategoryLabel } from '@/lib/data';
+import { getProductCategoryLabel } from '@/lib/data';
 import { CartRecommendationSections } from '@/components/CartRecommendationSections';
 
 export default function CartPage() {
   const { items, subtotal, updateQuantity, removeFromCart, clearCart } = useCart();
+  const { catalogFilters } = useCatalog();
   const { t, lang } = useLanguage();
 
   if (items.length === 0) {
@@ -43,7 +45,7 @@ export default function CartPage() {
                 <Image src={item.product.image} alt={item.product.name[lang]} width={92} height={92} />
                 <div>
                   <h3>{item.product.name[lang]}</h3>
-                  <p>{getCategoryLabel(item.product.categoryKey, lang)} · {item.product.price} AZN</p>
+                  <p>{getProductCategoryLabel(item.product, lang, catalogFilters)} · {item.product.price} AZN</p>
                   <div className="qty">
                     <button onClick={() => updateQuantity(item.slug, item.quantity - 1)} aria-label="minus"><Minus size={15} /></button>
                     <strong>{item.quantity}</strong>

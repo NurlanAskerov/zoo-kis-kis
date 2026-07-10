@@ -9,8 +9,8 @@ export type Category = {
 };
 
 export type AudienceKey = 'cats' | 'dogs' | 'birds' | 'fish' | 'hamsters' | 'allPets';
-export type ProductTypeKey = 'dryFood' | 'wetFood' | 'treat' | 'toy' | 'bowl' | 'toilet' | 'litter' | 'bed' | 'leash' | 'carrier' | 'aquarium' | 'cage' | 'grooming' | 'care';
-export type ProductDepartmentKey = 'food' | 'hygiene' | 'play' | 'home' | 'walking' | 'travel' | 'cages' | 'aquarium' | 'care';
+export type ProductTypeKey = string;
+export type ProductDepartmentKey = string;
 export type ProductCollectionKey = 'discount' | 'popular' | 'new';
 export type StockKey = 'inStock' | 'lowStock' | 'preOrder';
 
@@ -27,9 +27,8 @@ export type Product = {
   slug: string;
   name: LocalizedText;
   categoryKey: string;
+  departmentKey?: ProductDepartmentKey;
   typeKey: ProductTypeKey;
-  customDepartmentLabel?: LocalizedText;
-  customTypeLabel?: LocalizedText;
   audiences: AudienceKey[];
   collections: ProductCollectionKey[];
   price: number;
@@ -42,6 +41,25 @@ export type Product = {
   active?: boolean;
   description: LocalizedText;
   details: Record<Lang, string[]>;
+};
+
+export type CatalogLocalizedOption = {
+  key: string;
+  label: LocalizedText;
+};
+
+export type CatalogSubcategoryOption = CatalogLocalizedOption & {
+  departmentKey: string;
+};
+
+export type CatalogFilters = {
+  departments: CatalogLocalizedOption[];
+  subcategories: CatalogSubcategoryOption[];
+};
+
+export const emptyCatalogFilters: CatalogFilters = {
+  departments: [],
+  subcategories: []
 };
 
 export const brand = {
@@ -581,42 +599,42 @@ export const deliverySettings = {
     en: 'Every day',
     ru: 'Каждый день'
   },
-  provider: 'Wolt',
+  provider: 'Bolt',
   deliveryOnlyText: {
-    az: 'Çatdırılma yalnız Wolt vasitəsilə həyata keçirilir.',
-    en: 'Delivery is available only via Wolt.',
-    ru: 'Доставка осуществляется только через Wolt.'
+    az: 'Çatdırılma yalnız Bolt vasitəsilə həyata keçirilir.',
+    en: 'Delivery is available only via Bolt.',
+    ru: 'Доставка осуществляется только через Bolt.'
   },
   deliveryTimeText: {
     az: 'Hər gün 10:00-dan 22:00-dək',
     en: 'Every day from 10:00 to 22:00',
     ru: 'Каждый день с 10:00 до 22:00'
   },
-  metroDeliveryPrice: 'Wolt',
+  metroDeliveryPrice: 'Bolt',
   addressDeliveryFromPrice: {
-    az: 'Wolt vasitəsilə',
-    en: 'via Wolt',
-    ru: 'через Wolt'
+    az: 'Bolt vasitəsilə',
+    en: 'via Bolt',
+    ru: 'через Bolt'
   },
   regionPostDeliveryFromPrice: {
-    az: 'Yalnız Wolt çatdırılması',
-    en: 'Wolt delivery only',
-    ru: 'Только доставка Wolt'
+    az: 'Yalnız Bolt çatdırılması',
+    en: 'Bolt delivery only',
+    ru: 'Только доставка Bolt'
   },
   regionPostDeliveryTime: {
-    az: 'Yalnız Wolt çatdırılması',
-    en: 'Wolt delivery only',
-    ru: 'Только доставка Wolt'
+    az: 'Yalnız Bolt çatdırılması',
+    en: 'Bolt delivery only',
+    ru: 'Только доставка Bolt'
   },
   addressDeliveryNote: {
-    az: 'Sifarişlər hər gün 10:00–22:00 aralığında Wolt ilə göndərilir',
-    en: 'Orders are delivered by Wolt every day between 10:00 and 22:00',
-    ru: 'Заказы доставляются через Wolt каждый день с 10:00 до 22:00'
+    az: 'Sifarişlər hər gün 10:00–22:00 aralığında Bolt ilə göndərilir',
+    en: 'Orders are delivered by Bolt every day between 10:00 and 22:00',
+    ru: 'Заказы доставляются через Bolt каждый день с 10:00 до 22:00'
   },
   postDeliveryNote: {
-    az: 'Çatdırılma yalnız Wolt ilə edilir',
-    en: 'Delivery is available only via Wolt',
-    ru: 'Доставка осуществляется только через Wolt'
+    az: 'Çatdırılma yalnız Bolt ilə edilir',
+    en: 'Delivery is available only via Bolt',
+    ru: 'Доставка осуществляется только через Bolt'
   }
 };
 
@@ -656,4 +674,93 @@ export function getProductTypeLabel(key: ProductTypeKey, lang: Lang) {
 
 export function getAudienceLabel(key: AudienceKey, lang: Lang) {
   return audienceOptions.find(audience => audience.key === key)?.label[lang] ?? key;
+}
+
+export function getCatalogDepartmentOptions(filters: CatalogFilters = emptyCatalogFilters) {
+  const seen = new Set<string>();
+
+  return [...productDepartmentOptions, ...filters.departments].filter(option => {
+    if (!option.key || seen.has(option.key)) return false;
+    seen.add(option.key);
+    return true;
+  });
+}
+
+export function getCatalogSubcategoryOptionsForDepartment(
+  departmentKey: ProductDepartmentKey | 'all',
+  filters: CatalogFilters = emptyCatalogFilters
+) {
+  const staticOptions = getSubcategoryOptionsForDepartment(departmentKey);
+  const customOptions = departmentKey === 'all'
+    ? filters.subcategories
+    : filters.subcategories.filter(option => option.departmentKey === departmentKey);
+  const seen = new Set<string>();
+
+  return [...staticOptions, ...customOptions].filter(option => {
+    if (!option.key || seen.has(option.key)) return false;
+    seen.add(option.key);
+    return true;
+  });
+}
+
+export function getCatalogDepartmentForProductType(
+  typeKey: ProductTypeKey,
+  filters: CatalogFilters = emptyCatalogFilters
+) {
+  return filters.subcategories.find(option => option.key === typeKey)?.departmentKey
+    || getDepartmentForProductType(typeKey);
+}
+
+export function getProductDepartmentKey(
+  product: Pick<Product, 'departmentKey' | 'typeKey' | 'categoryKey'>,
+  filters: CatalogFilters = emptyCatalogFilters
+) {
+  if (product.departmentKey) return product.departmentKey;
+
+  const customTypeDepartment = filters.subcategories.find(option => option.key === product.typeKey)?.departmentKey;
+  if (customTypeDepartment) return customTypeDepartment;
+
+  if (filters.departments.some(option => option.key === product.categoryKey)) return product.categoryKey;
+
+  return getDepartmentForProductType(product.typeKey);
+}
+
+export function getCatalogDepartmentLabel(
+  key: ProductDepartmentKey,
+  lang: Lang,
+  filters: CatalogFilters = emptyCatalogFilters
+) {
+  return filters.departments.find(option => option.key === key)?.label[lang]
+    || getDepartmentLabel(key, lang);
+}
+
+export function getCatalogProductTypeLabel(
+  key: ProductTypeKey,
+  lang: Lang,
+  filters: CatalogFilters = emptyCatalogFilters
+) {
+  return filters.subcategories.find(option => option.key === key)?.label[lang]
+    || getProductTypeLabel(key, lang);
+}
+
+export function getProductCategoryLabel(
+  product: Pick<Product, 'departmentKey' | 'typeKey' | 'categoryKey'>,
+  lang: Lang,
+  filters: CatalogFilters = emptyCatalogFilters
+) {
+  const customSubcategory = filters.subcategories.find(option => option.key === product.typeKey);
+  if (customSubcategory) {
+    return getCatalogDepartmentLabel(customSubcategory.departmentKey, lang, filters);
+  }
+
+  const customDepartment = filters.departments.find(option => (
+    option.key === product.departmentKey || option.key === product.categoryKey
+  ));
+
+  if (customDepartment) return customDepartment.label[lang];
+
+  const category = categories.find(option => option.key === product.categoryKey);
+  if (category) return category.name[lang];
+
+  return getCatalogDepartmentLabel(getProductDepartmentKey(product, filters), lang, filters);
 }

@@ -27,17 +27,6 @@ type CartContextValue = {
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-const cartStorageKey = 'zoo-kis-kis-cart';
-const favoritesStorageKey = 'zoo-kis-kis-favorites';
-
-function safeRead<T>(key: string, fallback: T): T {
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) as T : fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { t, lang } = useLanguage();
@@ -46,18 +35,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  useEffect(() => {
-    setLines(safeRead<CartLine[]>(cartStorageKey, []));
-    setFavoriteSlugs(safeRead<string[]>(favoritesStorageKey, []));
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(cartStorageKey, JSON.stringify(lines));
-  }, [lines]);
-
-  useEffect(() => {
-    window.localStorage.setItem(favoritesStorageKey, JSON.stringify(favoriteSlugs));
-  }, [favoriteSlugs]);
 
   useEffect(() => {
     if (!toast) return;

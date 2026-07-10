@@ -19,7 +19,7 @@ export default function DeliveryPage() {
           <div className="info-card">
             <Truck size={30} />
             <h2>{t('toMetro')}</h2>
-            <p>Wolt</p>
+            <p>Bolt</p>
           </div>
           <div className="info-card">
             <Clock size={30} />

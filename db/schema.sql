@@ -85,6 +85,12 @@ CREATE TABLE IF NOT EXISTS product_tags (
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS catalog_settings (
+  key TEXT PRIMARY KEY,
+  payload TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(active);
 CREATE INDEX IF NOT EXISTS idx_products_audience ON products(audience);
 CREATE INDEX IF NOT EXISTS idx_products_department ON products(department);

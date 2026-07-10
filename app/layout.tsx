@@ -11,10 +11,10 @@ import { CustomerProfileProvider } from '@/components/customer-profile';
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.zookiskis.az'),
   title: {
-    default: 'Zoo Kis-Kis | Zooshop, Grooming və Wolt çatdırılma',
+    default: 'Zoo Kis-Kis | Zooshop, Grooming və Bolt çatdırılma',
     template: '%s | Zoo Kis-Kis'
   },
-  description: 'Zoo Kis-Kis — Bakı üçün pet shop və grooming xidməti. Pişik, it, quş, balıq və gəmiricilər üçün yemlər, oyuncaqlar, baxım məhsulları və Wolt ilə çatdırılma.',
+  description: 'Zoo Kis-Kis — Bakı üçün pet shop və grooming xidməti. Pişik, it, quş, balıq və gəmiricilər üçün yemlər, oyuncaqlar, baxım məhsulları və Bolt ilə çatdırılma.',
   applicationName: 'Zoo Kis-Kis',
   keywords: [
     'Zoo Kis-Kis',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     'it yemi',
     'grooming Bakı',
     'heyvan məhsulları',
-    'Wolt çatdırılma'
+    'Bolt çatdırılma'
   ],
   authors: [{ name: 'Zoo Kis-Kis' }],
   creator: 'Zoo Kis-Kis',
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     url: '/',
     siteName: 'Zoo Kis-Kis',
     title: 'Zoo Kis-Kis | Zooshop & Grooming',
-    description: 'Pişik, it, quş, balıq və gəmiricilər üçün yemlər, oyuncaqlar, baxım məhsulları, grooming və Wolt ilə çatdırılma.',
+    description: 'Pişik, it, quş, balıq və gəmiricilər üçün yemlər, oyuncaqlar, baxım məhsulları, grooming və Bolt ilə çatdırılma.',
     images: [
       {
         url: '/banners/zoo-kis-kis-store.webp',
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Zoo Kis-Kis | Zooshop & Grooming',
-    description: 'Pet shop, grooming və Wolt çatdırılma.',
+    description: 'Pet shop, grooming və Bolt çatdırılma.',
     images: ['/banners/zoo-kis-kis-store.webp']
   },
   robots: {

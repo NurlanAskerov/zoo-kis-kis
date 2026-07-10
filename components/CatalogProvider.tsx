@@ -1,12 +1,16 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { type Product } from '@/lib/data';
+import { emptyCatalogFilters, type CatalogFilters, type Product } from '@/lib/data';
+import { normalizeCatalogFilters } from '@/lib/catalog-filters';
 
 type CatalogContextValue = {
   products: Product[];
   loading: boolean;
+  catalogFilters: CatalogFilters;
+  catalogFiltersLoading: boolean;
   refreshProducts: () => Promise<void>;
+  refreshCatalogFilters: () => Promise<void>;
   findProduct: (slug: string) => Product | undefined;
 };
 
@@ -26,6 +30,8 @@ export function CatalogProvider({
   const initialVisible = useMemo(() => visibleProducts(initialProducts), [initialProducts]);
   const [products, setProducts] = useState<Product[]>(initialVisible);
   const [loading, setLoading] = useState(initialVisible.length === 0);
+  const [catalogFilters, setCatalogFilters] = useState<CatalogFilters>(emptyCatalogFilters);
+  const [catalogFiltersLoading, setCatalogFiltersLoading] = useState(true);
   const productsRef = useRef<Product[]>(initialVisible);
 
   useEffect(() => {
@@ -55,18 +61,41 @@ export function CatalogProvider({
     }
   }, []);
 
+  const refreshCatalogFilters = useCallback(async () => {
+    setCatalogFiltersLoading(true);
+
+    try {
+      const response = await fetch('/api/catalog-filters', { cache: 'no-store' });
+      if (!response.ok) return;
+
+      const data = await response.json() as { filters?: CatalogFilters };
+      setCatalogFilters(normalizeCatalogFilters(data.filters));
+    } catch {
+      setCatalogFilters(current => current);
+    } finally {
+      setCatalogFiltersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!initialVisible.length) {
       void refreshProducts();
     }
   }, [initialVisible.length, refreshProducts]);
 
+  useEffect(() => {
+    void refreshCatalogFilters();
+  }, [refreshCatalogFilters]);
+
   const value = useMemo(() => ({
     products,
     loading,
+    catalogFilters,
+    catalogFiltersLoading,
     refreshProducts,
+    refreshCatalogFilters,
     findProduct: (slug: string) => products.find(product => product.slug === slug)
-  }), [products, loading, refreshProducts]);
+  }), [products, loading, catalogFilters, catalogFiltersLoading, refreshProducts, refreshCatalogFilters]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { getAudienceLabel, getProductTypeLabel, type Product } from '@/lib/data';
+import { getAudienceLabel, getCatalogProductTypeLabel, type Product } from '@/lib/data';
 import { useCatalog } from './CatalogProvider';
 import { useCart } from './cart-context';
 import { useLanguage } from './LanguageProvider';
@@ -8,7 +8,7 @@ import { RecommendationShelf, uniqueProducts } from './RecommendationShelf';
 
 export function CartRecommendationSections({ cartProducts }: { cartProducts: Product[] }) {
   const { t, lang } = useLanguage();
-  const { products } = useCatalog();
+  const { products, catalogFilters } = useCatalog();
   const { favorites } = useCart();
   const anchor = cartProducts[0];
   const hidden = new Set(cartProducts.map(item => item.slug));
@@ -33,7 +33,7 @@ export function CartRecommendationSections({ cartProducts }: { cartProducts: Pro
   return (
     <div className="recommendation-stack cart-recommendations">
       <RecommendationShelf title={t('favoriteProducts')} items={favoriteItems} limit={4} />
-      <RecommendationShelf title={t('sameTypeProducts')} subtitle={getProductTypeLabel(anchor.typeKey, lang)} items={sameType} limit={4} />
+      <RecommendationShelf title={t('sameTypeProducts')} subtitle={getCatalogProductTypeLabel(anchor.typeKey, lang, catalogFilters)} items={sameType} limit={4} />
       <RecommendationShelf title={t('moreForThisPet')} subtitle={primaryAudience ? getAudienceLabel(primaryAudience, lang) : undefined} items={uniqueProducts(sameAudience)} limit={4} />
     </div>
   );

@@ -1,7 +1,7 @@
 {
   "name": "Zoo Kis-Kis",
   "short_name": "Zoo Kis-Kis",
-  "description": "Zooshop, grooming və Wolt çatdırılma.",
+  "description": "Zooshop, grooming və Bolt çatdırılma.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -2,12 +2,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { CheckCircle2, Heart, Share2, Truck } from 'lucide-react';
 import {
   getAudienceLabel,
-  getCategoryLabel,
-  getProductTypeLabel,
+  getCatalogProductTypeLabel,
+  getProductCategoryLabel,
   stockLabels,
   type AudienceKey,
   type Product,
@@ -20,7 +20,6 @@ import { useCart } from './cart-context';
 import { useLanguage } from './LanguageProvider';
 import { useCustomerProfile } from './customer-profile';
 import { buildProductQuestionMessage, createWhatsAppUrl } from '@/lib/whatsapp';
-import { getCustomDepartmentLabel, getCustomSubcategoryLabel, useCustomFilters } from './useCustomFilters';
 
 async function shareProductDetail(product: Product, lang: 'az' | 'en' | 'ru') {
   const path = `/products/${product.slug}`;
@@ -109,10 +108,9 @@ function getInitialVariantId(variants: ProductVariant[]) {
 
 export function ProductDetailClient({ product: initialProduct, slug }: { product?: Product; slug: string }) {
   const { t, lang } = useLanguage();
-  const { findProduct, loading: catalogLoading } = useCatalog();
+  const { findProduct, loading: catalogLoading, catalogFilters } = useCatalog();
   const { profile } = useCustomerProfile();
   const { toggleFavorite, isFavorite } = useCart();
-  const customFilters = useCustomFilters();
   const [remoteProduct, setRemoteProduct] = useState<Product | undefined>(initialProduct);
   const [remoteLoading, setRemoteLoading] = useState(!initialProduct);
   const [remoteTried, setRemoteTried] = useState(Boolean(initialProduct));
@@ -180,6 +178,21 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
     if (firstImage && (!selectedImage || !gallery.includes(selectedImage))) setSelectedImage(firstImage);
   }, [gallery, selectedImage]);
 
+  function handleImageZoom(event: MouseEvent<HTMLDivElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+
+    const x = Math.max(0, Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100));
+    const y = Math.max(0, Math.min(100, ((event.clientY - bounds.top) / bounds.height) * 100));
+    event.currentTarget.style.setProperty('--zoom-x', `${x}%`);
+    event.currentTarget.style.setProperty('--zoom-y', `${y}%`);
+  }
+
+  function resetImageZoom(event: MouseEvent<HTMLDivElement>) {
+    event.currentTarget.style.setProperty('--zoom-x', '50%');
+    event.currentTarget.style.setProperty('--zoom-y', '50%');
+  }
+
   if (!product) {
     const isStillLoading = catalogLoading || remoteLoading || !remoteTried;
 
@@ -218,8 +231,6 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   const liked = isFavorite(product.slug);
   const displayImage = selectedImage || product.image || '/products/cat-food.svg';
   const productDetails = (product.details?.[lang]?.length ? product.details[lang] : []).filter(item => !isProductionHiddenDetail(item));
-  const customDepartmentLabel = getCustomDepartmentLabel(customFilters, product.categoryKey, lang);
-  const customTypeLabel = getCustomSubcategoryLabel(customFilters, product.typeKey, lang);
   const selectedVariant = productVariants.find(variant => variant.id === selectedVariantId) ?? productVariants.find(isVariantSelectable) ?? productVariants[0];
   const selectedPrice = selectedVariant ? Number(selectedVariant.price || 0) : Number(product.price || 0);
   const selectedOldPrice = selectedVariant?.oldPrice ? Number(selectedVariant.oldPrice) : Number(product.oldPrice || 0);
@@ -238,7 +249,11 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
         <div className="detail">
           <div className="detail-media">
             {product.badge && <span className="product-badge detail-badge">{product.badge[lang]}</span>}
-            <div className="detail-main-image">
+            <div
+              className="detail-main-image detail-image-zoom"
+              onMouseMove={handleImageZoom}
+              onMouseLeave={resetImageZoom}
+            >
               <Image
                 src={displayImage}
                 alt={productTitle}
@@ -277,12 +292,12 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
             )}
           </div>
           <div className="detail-content">
-            <p className="eyebrow">{customDepartmentLabel || product.customDepartmentLabel?.[lang] || product.customDepartmentLabel?.az || getCategoryLabel(product.categoryKey, lang)}</p>
+            <p className="eyebrow">{getProductCategoryLabel(product, lang, catalogFilters)}</p>
             <h1>{productTitle}</h1>
             {productDescription ? <p>{productDescription}</p> : null}
             <div className="product-tags detail-tags">
               {productAudiences.map(audience => <span key={audience}>{getAudienceLabel(audience, lang)}</span>)}
-              <span>{customTypeLabel || product.customTypeLabel?.[lang] || product.customTypeLabel?.az || getProductTypeLabel(product.typeKey, lang)}</span>
+              <span>{getCatalogProductTypeLabel(product.typeKey, lang, catalogFilters)}</span>
               <span className={selectedStock === 'preOrder' ? 'muted-stock' : ''}>{stockLabels[selectedStock]?.[lang] ?? stockLabels.inStock[lang]}</span>
             </div>
             <div className="detail-price">

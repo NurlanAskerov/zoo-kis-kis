@@ -1,6 +1,6 @@
 'use client';
 
-import { getAudienceLabel, getProductTypeLabel, type Product } from '@/lib/data';
+import { getAudienceLabel, getCatalogProductTypeLabel, type Product } from '@/lib/data';
 import { useCatalog } from './CatalogProvider';
 import { useCart } from './cart-context';
 import { useLanguage } from './LanguageProvider';
@@ -8,7 +8,7 @@ import { RecommendationShelf, uniqueProducts } from './RecommendationShelf';
 
 export function ProductRecommendations({ product }: { product: Product }) {
   const { t, lang } = useLanguage();
-  const { products } = useCatalog();
+  const { products, catalogFilters } = useCatalog();
   const { favorites } = useCart();
   const hidden = new Set([product.slug]);
 
@@ -30,7 +30,7 @@ export function ProductRecommendations({ product }: { product: Product }) {
       />
       <RecommendationShelf
         title={t('sameTypeProducts')}
-        subtitle={getProductTypeLabel(product.typeKey, lang)}
+        subtitle={getCatalogProductTypeLabel(product.typeKey, lang, catalogFilters)}
         items={sameType}
         limit={4}
       />

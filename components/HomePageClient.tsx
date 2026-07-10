@@ -473,7 +473,7 @@ export function HomePageClient() {
             <h2>{t('deliveryTitle')}</h2>
             <p>{t('deliveryText')}</p>
             <div className="list">
-              <span className="list-item"><Truck size={18} /> {t('delivery')}: Wolt</span>
+              <span className="list-item"><Truck size={18} /> {t('delivery')}: Bolt</span>
             </div>
             <Link href="/delivery" className="btn btn-primary">{t('moreInfo')}</Link>
           </div>

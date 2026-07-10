@@ -1,0 +1,37 @@
+ZOO KIS-KIS — "Yeni bölmə" düzəlişi
+====================================
+
+PROBLEM:
+Admin custom bölmə/alt bölmə yaradıb ora məhsul əlavə edəndə, məhsul
+saxlanarkən custom açar itirdi, "Yemlər"ə düşürdü və saytda görünmürdü.
+
+DÜZƏLİŞ (yalnız məntiq qatı — dizayna toxunulmayıb):
+  lib/db.ts                     — custom bölmə açarı və 3 dildəki adlar qorunur
+  lib/data.ts                   — Product-a custom sahələr + buildCatalogTaxonomy
+  components/ProductFilters.tsx — filtrlər canlı kataloqdan qurulur (custom bölmələr görünür)
+  app/admin/page.tsx            — custom bölmə adları məhsulla saxlanır/bərpa olunur
+
+NECƏ TƏTBIQ ETMƏLI:
+1) Bu 4 faylı öz layihənizin ÜSTÜNƏ eyni yerlərə kopyalayın (overwrite):
+      lib/db.ts
+      lib/data.ts
+      components/ProductFilters.tsx
+      app/admin/page.tsx
+
+2) Köhnə build cache-ini silin:
+      rm -rf .next
+
+3) Yenidən qurub işə salın:
+      npm run build
+      npm run dev
+
+4) Yoxlama:
+   - Admin panel > "Yeni məhsul əlavə et" > "+ Bölmə / alt bölmə əlavə et"
+   - Yeni bölmə + alt bölmə yaradın, məhsulu həmin bölməyə əlavə edib saxlayın.
+   - Sayt > Məhsullar > filtrdə yeni bölmə görünməlidir və məhsul orada olmalıdır.
+
+QEYD:
+- Bölmə DB-nin mövcud "department"/"subcategory" sütunlarında saxlanır,
+  əlavə SQL/miqrasiya lazım deyil.
+- Turso konfiqurasiyası (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN) olmalıdır ki,
+  məhsullar DB-yə yazılsın.

@@ -3,6 +3,7 @@ import {
   getDepartmentForProductType,
   products,
   type AudienceKey,
+  type CatalogFilters,
   type Lang,
   type Product,
   type ProductVariant,
@@ -10,30 +11,10 @@ import {
   type ProductTypeKey,
   type StockKey
 } from './data';
+import { normalizeCatalogFilters } from './catalog-filters';
 
 let cachedClient: ReturnType<typeof createClient> | null = null;
 let cachedSchemaMode: 'wide' | 'legacy' | null = null;
-
-export type AdminCustomFilterOption = {
-  key: string;
-  label: Record<Lang, string>;
-};
-
-export type AdminCustomSubcategoryOption = {
-  key: string;
-  departmentKey: string;
-  label: Record<Lang, string>;
-};
-
-export type AdminCustomFilters = {
-  departments: AdminCustomFilterOption[];
-  subcategories: AdminCustomSubcategoryOption[];
-};
-
-const emptyAdminCustomFilters: AdminCustomFilters = {
-  departments: [],
-  subcategories: []
-};
 
 const langs: Lang[] = ['az', 'en', 'ru'];
 const validProductTypes = new Set<ProductTypeKey>([
@@ -56,9 +37,15 @@ const validAudiences = new Set<AudienceKey>(['cats', 'dogs', 'birds', 'fish', 'h
 const validCollections = new Set<ProductCollectionKey>(['discount', 'popular', 'new']);
 const validStocks = new Set<StockKey>(['inStock', 'lowStock', 'preOrder']);
 
-function isCustomProductType(value: unknown) {
-  const raw = String(value || '').trim();
-  return raw.startsWith('custom-sub-');
+function cleanCatalogKey(value: unknown, fallback = '') {
+  const clean = String(value || '')
+    .trim()
+    .replace(/[^a-z0-9əöğüşıçа-яё_-]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 140);
+
+  return clean || fallback;
 }
 
 const hiddenProductionDetailPhrases = [
@@ -209,44 +196,6 @@ export function clearProductRuntimeCache() {
   publicProductBySlugRuntimeCache.clear();
 }
 
-function cleanCustomLabel(value: unknown): Record<Lang, string> {
-  const raw = value && typeof value === 'object' ? value as Partial<Record<Lang, unknown>> : {};
-  const fallback = String(raw.az || raw.en || raw.ru || '').trim();
-
-  return {
-    az: String(raw.az || fallback).trim() || fallback,
-    en: String(raw.en || fallback).trim() || fallback,
-    ru: String(raw.ru || fallback).trim() || fallback
-  };
-}
-
-function cleanCustomFilters(input: unknown): AdminCustomFilters {
-  const raw = input && typeof input === 'object' ? input as Partial<AdminCustomFilters> : {};
-
-  const departments = Array.isArray(raw.departments)
-    ? raw.departments
-      .map(item => {
-        const key = String(item?.key || '').trim();
-        const label = cleanCustomLabel(item?.label);
-        return key && label.az ? { key, label } : null;
-      })
-      .filter((item): item is AdminCustomFilterOption => Boolean(item))
-    : [];
-
-  const subcategories = Array.isArray(raw.subcategories)
-    ? raw.subcategories
-      .map(item => {
-        const key = String(item?.key || '').trim();
-        const departmentKey = String(item?.departmentKey || '').trim();
-        const label = cleanCustomLabel(item?.label);
-        return key && departmentKey && label.az ? { key, departmentKey, label } : null;
-      })
-      .filter((item): item is AdminCustomSubcategoryOption => Boolean(item))
-    : [];
-
-  return { departments, subcategories };
-}
-
 export function hasDatabaseConfig() {
   return Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
 }
@@ -348,28 +297,12 @@ export const createTablesSql = [
     tag TEXT NOT NULL,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
   )`,
-  `CREATE TABLE IF NOT EXISTS admin_departments (
+  `CREATE TABLE IF NOT EXISTS catalog_settings (
     key TEXT PRIMARY KEY,
-    label_az TEXT NOT NULL,
-    label_en TEXT NOT NULL,
-    label_ru TEXT NOT NULL,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    payload TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
-  `CREATE TABLE IF NOT EXISTS admin_subcategories (
-    key TEXT PRIMARY KEY,
-    department_key TEXT NOT NULL,
-    label_az TEXT NOT NULL,
-    label_en TEXT NOT NULL,
-    label_ru TEXT NOT NULL,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (department_key) REFERENCES admin_departments(key) ON DELETE CASCADE
-  )`,
-  `CREATE INDEX IF NOT EXISTS idx_admin_subcategories_department_key ON admin_subcategories(department_key)`,
-  `CREATE INDEX IF NOT EXISTS idx_products_active ON products(active)`, 
+  `CREATE INDEX IF NOT EXISTS idx_products_active ON products(active)`,
   `CREATE INDEX IF NOT EXISTS idx_products_audience ON products(audience)`,
   `CREATE INDEX IF NOT EXISTS idx_products_department ON products(department)`,
   `CREATE INDEX IF NOT EXISTS idx_products_subcategory ON products(subcategory)`,
@@ -395,84 +328,51 @@ export async function ensureDatabase() {
   return true;
 }
 
-export async function getCustomFiltersFromDb(): Promise<AdminCustomFilters> {
-  if (!hasDatabaseConfig()) return emptyAdminCustomFilters;
+async function ensureCatalogSettingsTable() {
+  if (!hasDatabaseConfig()) return false;
 
-  await ensureDatabase();
+  await getTursoClient().execute(`CREATE TABLE IF NOT EXISTS catalog_settings (
+    key TEXT PRIMARY KEY,
+    payload TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-  const departmentsResult = await getTursoClient().execute(
-    'SELECT key, label_az, label_en, label_ru FROM admin_departments ORDER BY sort_order ASC, key ASC'
-  );
-  const subcategoriesResult = await getTursoClient().execute(
-    'SELECT key, department_key, label_az, label_en, label_ru FROM admin_subcategories ORDER BY sort_order ASC, key ASC'
-  );
-
-  return {
-    departments: departmentsResult.rows
-      .map(row => {
-        const item = row as Record<string, unknown>;
-        const key = String(item.key || '').trim();
-        const label = {
-          az: String(item.label_az || '').trim(),
-          en: String(item.label_en || item.label_az || '').trim(),
-          ru: String(item.label_ru || item.label_az || '').trim()
-        };
-        return key && label.az ? { key, label } : null;
-      })
-      .filter((item): item is AdminCustomFilterOption => Boolean(item)),
-    subcategories: subcategoriesResult.rows
-      .map(row => {
-        const item = row as Record<string, unknown>;
-        const key = String(item.key || '').trim();
-        const departmentKey = String(item.department_key || '').trim();
-        const label = {
-          az: String(item.label_az || '').trim(),
-          en: String(item.label_en || item.label_az || '').trim(),
-          ru: String(item.label_ru || item.label_az || '').trim()
-        };
-        return key && departmentKey && label.az ? { key, departmentKey, label } : null;
-      })
-      .filter((item): item is AdminCustomSubcategoryOption => Boolean(item))
-  };
+  return true;
 }
 
-export async function upsertCustomFiltersToDb(filters: AdminCustomFilters): Promise<AdminCustomFilters> {
-  const cleanFilters = cleanCustomFilters(filters);
+export async function getCatalogFiltersFromDb(): Promise<CatalogFilters> {
+  if (!hasDatabaseConfig()) return normalizeCatalogFilters({});
 
-  if (!hasDatabaseConfig()) return cleanFilters;
+  await ensureCatalogSettingsTable();
+  const result = await getTursoClient().execute({
+    sql: 'SELECT payload FROM catalog_settings WHERE key = ? LIMIT 1',
+    args: ['custom-filters']
+  });
 
-  await ensureDatabase();
+  if (!result.rows[0]) return normalizeCatalogFilters({});
 
-  for (const [index, department] of cleanFilters.departments.entries()) {
-    await getTursoClient().execute({
-      sql: `INSERT INTO admin_departments (key, label_az, label_en, label_ru, sort_order, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(key) DO UPDATE SET
-              label_az = excluded.label_az,
-              label_en = excluded.label_en,
-              label_ru = excluded.label_ru,
-              sort_order = excluded.sort_order,
-              updated_at = CURRENT_TIMESTAMP`,
-      args: [department.key, department.label.az, department.label.en, department.label.ru, index]
-    });
+  try {
+    return normalizeCatalogFilters(JSON.parse(String((result.rows[0] as Record<string, unknown>).payload || '{}')));
+  } catch {
+    return normalizeCatalogFilters({});
   }
+}
 
-  for (const [index, subcategory] of cleanFilters.subcategories.entries()) {
-    await getTursoClient().execute({
-      sql: `INSERT INTO admin_subcategories (key, department_key, label_az, label_en, label_ru, sort_order, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(key) DO UPDATE SET
-              department_key = excluded.department_key,
-              label_az = excluded.label_az,
-              label_en = excluded.label_en,
-              label_ru = excluded.label_ru,
-              sort_order = excluded.sort_order,
-              updated_at = CURRENT_TIMESTAMP`,
-      args: [subcategory.key, subcategory.departmentKey, subcategory.label.az, subcategory.label.en, subcategory.label.ru, index]
-    });
-  }
+export async function saveCatalogFiltersToDb(value: unknown): Promise<CatalogFilters> {
+  const filters = normalizeCatalogFilters(value);
+  if (!hasDatabaseConfig()) return filters;
 
-  return getCustomFiltersFromDb();
+  await ensureCatalogSettingsTable();
+  await getTursoClient().execute({
+    sql: `INSERT INTO catalog_settings (key, payload, updated_at)
+          VALUES (?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(key) DO UPDATE SET
+            payload = excluded.payload,
+            updated_at = CURRENT_TIMESTAMP`,
+    args: ['custom-filters', JSON.stringify(filters)]
+  });
+
+  return filters;
 }
 
 async function tableColumns(table: string) {
@@ -576,8 +476,8 @@ function stockToDb(value: StockKey) {
 }
 
 function typeFromDb(value: unknown): ProductTypeKey {
-  const raw = String(value || 'care').trim();
-  if (validProductTypes.has(raw as ProductTypeKey) || isCustomProductType(raw)) return raw as ProductTypeKey;
+  const raw = String(value || 'care');
+  if (validProductTypes.has(raw as ProductTypeKey)) return raw as ProductTypeKey;
 
   const map: Record<string, ProductTypeKey> = {
     'dry-food': 'dryFood',
@@ -604,7 +504,7 @@ function typeFromDb(value: unknown): ProductTypeKey {
     grooming: 'grooming',
     care: 'care'
   };
-  return map[raw] || 'care';
+  return map[raw] || cleanCatalogKey(raw, 'care');
 }
 
 function collectionsFromRow(row: Record<string, unknown>): ProductCollectionKey[] {
@@ -658,8 +558,8 @@ export function normalizeProduct(input: Partial<Product>): Product {
     .replace(/^-+|-+$/g, '') || `product-${Date.now()}`;
 
   const image = input.image || input.images?.[0] || '/products/cat-food.svg';
-  const rawTypeKey = String(input.typeKey || fallback.typeKey).trim() as ProductTypeKey;
-  const typeKey = validProductTypes.has(rawTypeKey) || isCustomProductType(rawTypeKey) ? rawTypeKey : fallback.typeKey;
+  const typeKey = cleanCatalogKey(input.typeKey, fallback.typeKey);
+  const departmentKey = cleanCatalogKey(input.departmentKey, getDepartmentForProductType(typeKey));
 
   const normalizedAudiences: AudienceKey[] = (input.audiences ?? [])
     .filter((item): item is AudienceKey => validAudiences.has(item as AudienceKey));
@@ -673,10 +573,9 @@ export function normalizeProduct(input: Partial<Product>): Product {
     id: input.id || slug,
     slug,
     name: input.name ?? { az: nameAz, en: nameAz, ru: nameAz },
-    categoryKey: String(input.categoryKey || '').trim() || categoryKeyFromType(typeKey),
+    categoryKey: input.categoryKey || categoryKeyFromType(typeKey),
+    departmentKey,
     typeKey,
-    customDepartmentLabel: input.customDepartmentLabel,
-    customTypeLabel: input.customTypeLabel,
     audiences: normalizedAudiences.length ? normalizedAudiences : ['allPets'],
     collections: normalizedCollections,
     price: Number(input.price || normalizedVariants?.[0]?.price || 0),
@@ -735,6 +634,7 @@ function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<st
   const images = tableImages.length ? tableImages : (jsonImages.length ? jsonImages : (imageUrl ? [imageUrl] : []));
   const mainImage = images[0] || '/products/cat-food.svg';
   const extra = safeJson(row.extra_json);
+  const departmentKey = cleanCatalogKey(row.department || extra.departmentKey, getDepartmentForProductType(typeKey));
   const detailsFromExtra = extra.details && typeof extra.details === 'object' ? extra.details : undefined;
   const details = langs.reduce((acc, lang) => {
     const extraItems = Array.isArray(detailsFromExtra?.[lang]) ? detailsFromExtra[lang] : [];
@@ -750,10 +650,9 @@ function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<st
     id: String(row.id || row.slug),
     slug: getString(row, 'slug') || slugify(getString(row, 'name_az')),
     name: localized(row.name_az, row.name_en, row.name_ru),
-    categoryKey: String(extra.categoryKey || '').trim() || String(row.department || '').trim() || categoryKeyFromType(typeKey),
+    categoryKey: cleanCatalogKey(extra.categoryKey, categoryKeyFromType(typeKey)),
+    departmentKey,
     typeKey,
-    customDepartmentLabel: extra.customDepartmentLabel as Product['customDepartmentLabel'] | undefined,
-    customTypeLabel: extra.customTypeLabel as Product['customTypeLabel'] | undefined,
     audiences: parseAudiences(row.audience),
     collections: collectionsFromRow(row),
     price: Number(row.price || 0),
@@ -876,13 +775,12 @@ export async function upsertProduct(product: Product) {
 
   const normalized = normalizeProduct(product);
   const productId = normalized.slug;
-  const department = isCustomProductType(normalized.typeKey) ? normalized.categoryKey : getDepartmentForProductType(normalized.typeKey);
+  const department = normalized.departmentKey || getDepartmentForProductType(normalized.typeKey);
   const collections = normalized.collections ?? [];
   const badge = normalized.badge ?? { az: '', en: '', ru: '' };
   const extra = {
     categoryKey: normalized.categoryKey,
-    customDepartmentLabel: normalized.customDepartmentLabel,
-    customTypeLabel: normalized.customTypeLabel,
+    departmentKey: department,
     collections,
     details: normalized.details,
     variants: normalized.variants ?? []

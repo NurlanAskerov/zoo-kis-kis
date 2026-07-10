@@ -1,0 +1,4 @@
+Bu arxiv yalnız dəyişdirilmiş/yeni faylları saxlayır.
+Faylları layihənin kök qovluğuna eyni yollarla kopyalayın və mövcud faylları əvəz edin.
+Sonra npm install və npm run build əmrlərini işlədin.
+Mövcud .env faylınızı qoruyun; bu arxivdə məxfi məlumat yoxdur.

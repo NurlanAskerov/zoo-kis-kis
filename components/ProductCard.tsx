@@ -3,11 +3,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, Share2 } from 'lucide-react';
-import { getAudienceLabel, getDepartmentForProductType, getDepartmentLabel, getProductTypeLabel, stockLabels, type Product, type ProductVariant } from '@/lib/data';
+import { getAudienceLabel, getCatalogDepartmentLabel, getCatalogProductTypeLabel, getProductDepartmentKey, stockLabels, type Product, type ProductVariant } from '@/lib/data';
 import { AddToCartButton } from './AddToCartButton';
+import { useCatalog } from './CatalogProvider';
 import { useCart } from './cart-context';
 import { useLanguage } from './LanguageProvider';
-import { getCustomDepartmentLabel, getCustomSubcategoryLabel, useCustomFilters } from './useCustomFilters';
 
 async function shareProduct(product: Product, lang: 'az' | 'en' | 'ru') {
   const path = `/products/${product.slug}`;
@@ -56,11 +56,9 @@ function isVariantSelectable(variant: ProductVariant) {
 export function ProductCard({ product }: { product: Product }) {
   const { t, lang } = useLanguage();
   const { toggleFavorite, isFavorite } = useCart();
-  const customFilters = useCustomFilters();
-  const customDepartmentLabel = getCustomDepartmentLabel(customFilters, product.categoryKey, lang);
-  const customTypeLabel = getCustomSubcategoryLabel(customFilters, product.typeKey, lang);
+  const { catalogFilters } = useCatalog();
   const primaryAudience = product.audiences?.[0] ?? 'allPets';
-  const department = getDepartmentForProductType(product.typeKey);
+  const department = getProductDepartmentKey(product, catalogFilters);
   const images = product.images?.length ? product.images : [product.image || '/products/cat-food.svg'];
   const hoverImage = images[1];
   const liked = isFavorite(product.slug);
@@ -126,13 +124,13 @@ export function ProductCard({ product }: { product: Product }) {
       </Link>
       <div className="product-body">
         <div className="product-meta">
-          <span>{customDepartmentLabel || product.customDepartmentLabel?.[lang] || product.customDepartmentLabel?.az || getDepartmentLabel(department, lang)}</span>
+          <span>{getCatalogDepartmentLabel(department, lang, catalogFilters)}</span>
           <span>{stockLabels[product.stock][lang]}</span>
         </div>
         <Link href={`/products/${product.slug}`} prefetch={false}><h3 className="product-title">{product.name[lang]}</h3></Link>
         <div className="product-tags" aria-label="Product filters">
           <span>{getAudienceLabel(primaryAudience, lang)}</span>
-          <span>{customTypeLabel || product.customTypeLabel?.[lang] || product.customTypeLabel?.az || getProductTypeLabel(product.typeKey, lang)}</span>
+          <span>{getCatalogProductTypeLabel(product.typeKey, lang, catalogFilters)}</span>
         </div>
         <div className="product-bottom">
           <div>

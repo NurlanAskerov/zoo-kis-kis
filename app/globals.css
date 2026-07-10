@@ -7235,3 +7235,34 @@ select:focus,
     padding: 0 14px;
   }
 }
+
+/* v75: cursor-position product detail zoom */
+.detail-image-zoom {
+  --zoom-x: 50%;
+  --zoom-y: 50%;
+  position: relative;
+}
+
+.detail-image-zoom img {
+  transform-origin: var(--zoom-x) var(--zoom-y);
+  transition: transform .26s ease;
+  will-change: transform;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .detail-image-zoom {
+    cursor: zoom-in;
+  }
+
+  .detail-image-zoom:hover img {
+    transform: scale(2.05);
+    transition-duration: .16s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-image-zoom img {
+    transition: none;
+  }
+}
