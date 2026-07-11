@@ -42,7 +42,10 @@ export function CatalogProvider({
     if (!productsRef.current.length) setLoading(true);
 
     try {
-      const response = await fetch('/api/products', { cache: 'no-store' });
+      const response = await fetch(`/api/products?ts=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       if (!response.ok) {
         setProducts(current => current);
         return;
@@ -65,11 +68,16 @@ export function CatalogProvider({
     setCatalogFiltersLoading(true);
 
     try {
-      const response = await fetch('/api/catalog-filters', { cache: 'no-store' });
-      if (!response.ok) return;
+      const endpoints = ['/api/catalog-filters', '/api/custom-filters'];
 
-      const data = await response.json() as { filters?: CatalogFilters };
-      setCatalogFilters(normalizeCatalogFilters(data.filters));
+      for (const endpoint of endpoints) {
+        const response = await fetch(`${endpoint}?ts=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) continue;
+
+        const data = await response.json().catch(() => ({})) as { filters?: CatalogFilters };
+        setCatalogFilters(normalizeCatalogFilters(data.filters));
+        return;
+      }
     } catch {
       setCatalogFilters(current => current);
     } finally {
@@ -78,10 +86,29 @@ export function CatalogProvider({
   }, []);
 
   useEffect(() => {
-    if (!initialVisible.length) {
+    // Hər yeni brauzer sessiyasında DB-dən təzə məhsul siyahısı alınır.
+    void refreshProducts();
+  }, [refreshProducts]);
+
+  useEffect(() => {
+    const refreshOnFocus = () => {
       void refreshProducts();
-    }
-  }, [initialVisible.length, refreshProducts]);
+    };
+
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === 'visible') refreshOnFocus();
+    };
+
+    window.addEventListener('focus', refreshOnFocus);
+    window.addEventListener('pageshow', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnVisibility);
+
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      window.removeEventListener('pageshow', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnVisibility);
+    };
+  }, [refreshProducts]);
 
   useEffect(() => {
     void refreshCatalogFilters();

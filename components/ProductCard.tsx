@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, Share2 } from 'lucide-react';
-import { getAudienceLabel, getCatalogDepartmentLabel, getCatalogProductTypeLabel, getProductDepartmentKey, stockLabels, type Product, type ProductVariant } from '@/lib/data';
+import { getAudienceLabel, getProductCategoryLabel, getProductTypeDisplayLabel, stockLabels, type Product, type ProductVariant } from '@/lib/data';
 import { AddToCartButton } from './AddToCartButton';
 import { useCatalog } from './CatalogProvider';
 import { useCart } from './cart-context';
@@ -58,7 +58,6 @@ export function ProductCard({ product }: { product: Product }) {
   const { toggleFavorite, isFavorite } = useCart();
   const { catalogFilters } = useCatalog();
   const primaryAudience = product.audiences?.[0] ?? 'allPets';
-  const department = getProductDepartmentKey(product, catalogFilters);
   const images = product.images?.length ? product.images : [product.image || '/products/cat-food.svg'];
   const hoverImage = images[1];
   const liked = isFavorite(product.slug);
@@ -124,13 +123,13 @@ export function ProductCard({ product }: { product: Product }) {
       </Link>
       <div className="product-body">
         <div className="product-meta">
-          <span>{getCatalogDepartmentLabel(department, lang, catalogFilters)}</span>
+          <span>{getProductCategoryLabel(product, lang, catalogFilters)}</span>
           <span>{stockLabels[product.stock][lang]}</span>
         </div>
         <Link href={`/products/${product.slug}`} prefetch={false}><h3 className="product-title">{product.name[lang]}</h3></Link>
         <div className="product-tags" aria-label="Product filters">
           <span>{getAudienceLabel(primaryAudience, lang)}</span>
-          <span>{getCatalogProductTypeLabel(product.typeKey, lang, catalogFilters)}</span>
+          <span>{getProductTypeDisplayLabel(product, lang, catalogFilters)}</span>
         </div>
         <div className="product-bottom">
           <div>

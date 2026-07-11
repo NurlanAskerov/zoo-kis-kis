@@ -44,19 +44,3 @@ Add the same env values in Cloudflare project settings / secrets before deployme
 ## Images
 
 The admin panel currently saves image paths or URLs. For production file uploads, connect Cloudflare R2 or Cloudflare Images and save the returned URL in the image fields.
-
-
-## Turso bölmə cədvəlləri
-
-Admin paneldə əlavə olunan yeni bölmə və alt bölmələr bütün cihazlarda görünsün deyə Turso-da bu cədvəlləri yarat:
-
-1. Turso Cloud → database → SQL console.
-2. `turso/admin_custom_filters.sql` faylındakı SQL-i çalışdır.
-3. Vercel/env-də bunlar olmalıdır:
-
-```env
-TURSO_DATABASE_URL=...
-TURSO_AUTH_TOKEN=...
-```
-
-Bundan sonra admin paneldə əlavə olunan bölmə/alt bölmə DB-yə yazılacaq və məhsul filterlərində işləyəcək.

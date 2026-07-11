@@ -28,7 +28,9 @@ export type Product = {
   name: LocalizedText;
   categoryKey: string;
   departmentKey?: ProductDepartmentKey;
+  departmentLabel?: LocalizedText;
   typeKey: ProductTypeKey;
+  typeLabel?: LocalizedText;
   audiences: AudienceKey[];
   collections: ProductCollectionKey[];
   price: number;
@@ -744,10 +746,17 @@ export function getCatalogProductTypeLabel(
 }
 
 export function getProductCategoryLabel(
-  product: Pick<Product, 'departmentKey' | 'typeKey' | 'categoryKey'>,
+  product: Pick<Product, 'departmentKey' | 'departmentLabel' | 'typeKey' | 'categoryKey'>,
   lang: Lang,
   filters: CatalogFilters = emptyCatalogFilters
 ) {
+  const embeddedDepartmentLabel = product.departmentLabel?.[lang]
+    || product.departmentLabel?.az
+    || product.departmentLabel?.en
+    || product.departmentLabel?.ru;
+
+  if (embeddedDepartmentLabel) return embeddedDepartmentLabel;
+
   const customSubcategory = filters.subcategories.find(option => option.key === product.typeKey);
   if (customSubcategory) {
     return getCatalogDepartmentLabel(customSubcategory.departmentKey, lang, filters);
@@ -763,4 +772,16 @@ export function getProductCategoryLabel(
   if (category) return category.name[lang];
 
   return getCatalogDepartmentLabel(getProductDepartmentKey(product, filters), lang, filters);
+}
+
+export function getProductTypeDisplayLabel(
+  product: Pick<Product, 'typeKey' | 'typeLabel'>,
+  lang: Lang,
+  filters: CatalogFilters = emptyCatalogFilters
+) {
+  return product.typeLabel?.[lang]
+    || product.typeLabel?.az
+    || product.typeLabel?.en
+    || product.typeLabel?.ru
+    || getCatalogProductTypeLabel(product.typeKey, lang, filters);
 }

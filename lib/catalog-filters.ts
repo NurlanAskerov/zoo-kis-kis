@@ -23,6 +23,27 @@ function slugifyCatalogKey(value: unknown) {
   return slug;
 }
 
+/**
+ * Older admin builds stored internal prefixes such as
+ * `custom-section-pets` and `custom-sub-custom-section-pets-food` in the
+ * products table. They are implementation details, not catalog values.
+ * Keep accepting those values, but expose and persist clean keys.
+ */
+export function cleanLegacyCatalogKey(value: unknown) {
+  let key = slugifyCatalogKey(value);
+  let previous = '';
+
+  while (key && key !== previous) {
+    previous = key;
+    key = key
+      .replace(/^custom-section-+/, '')
+      .replace(/^custom-sub-+/, '')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  return key.slice(0, 140);
+}
+
 function normalizeLabel(value: unknown): LocalizedText | null {
   const raw = value && typeof value === 'object' ? value as Partial<LocalizedText> : {};
   const az = String(raw.az || '').trim().slice(0, 120);
@@ -51,7 +72,7 @@ function normalizeDepartments(value: unknown): CatalogLocalizedOption[] {
     const label = normalizeLabel(row.label);
     if (!label) continue;
 
-    const key = slugifyCatalogKey(row.key || label.az);
+    const key = cleanLegacyCatalogKey(row.key || label.az);
     if (!key || staticDepartmentKeys.has(key) || seen.has(key)) continue;
 
     seen.add(key);
@@ -77,10 +98,10 @@ function normalizeSubcategories(value: unknown, departments: CatalogLocalizedOpt
     const label = normalizeLabel(row.label);
     if (!label) continue;
 
-    const departmentKey = slugifyCatalogKey(row.departmentKey);
+    const departmentKey = cleanLegacyCatalogKey(row.departmentKey);
     if (!allowedDepartments.has(departmentKey)) continue;
 
-    const key = slugifyCatalogKey(row.key || `${departmentKey}-${label.az}`);
+    const key = cleanLegacyCatalogKey(row.key || `${departmentKey}-${label.az}`);
     if (!key || staticSubcategoryKeys.has(key) || seen.has(key)) continue;
 
     seen.add(key);
@@ -100,10 +121,11 @@ function addDefaultSubcategories(
   for (const department of departments) {
     if (result.some(option => option.departmentKey === department.key)) continue;
 
-    let key = slugifyCatalogKey(`custom-sub-${department.key}`);
+    const baseKey = cleanLegacyCatalogKey(department.key) || 'subcategory';
+    let key = baseKey;
     let suffix = 2;
     while (usedKeys.has(key) || staticSubcategoryKeys.has(key)) {
-      key = slugifyCatalogKey(`custom-sub-${department.key}-${suffix}`);
+      key = cleanLegacyCatalogKey(`${baseKey}-${suffix}`);
       suffix += 1;
     }
 

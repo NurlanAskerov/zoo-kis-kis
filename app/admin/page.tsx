@@ -155,9 +155,29 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '') || `product-${Date.now()}`;
 }
 
-function slugifyAdminOption(value: string, prefix: string) {
-  const key = slugify(value);
-  return `${prefix}-${key}`.replace(/-+/g, '-');
+function slugifyAdminOption(value: string, fallbackPrefix: string) {
+  const key = value
+    .toLocaleLowerCase('az-AZ')
+    .trim()
+    .replace(/[^a-z0-9əöğüşıçа-яё_-]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120);
+
+  return key || `${fallbackPrefix}-${Date.now()}`;
+}
+
+function uniqueAdminOptionKey(preferred: string, usedKeys: Set<string>) {
+  if (!usedKeys.has(preferred)) return preferred;
+
+  let suffix = 2;
+  let candidate = `${preferred}-${suffix}`;
+  while (usedKeys.has(candidate)) {
+    suffix += 1;
+    candidate = `${preferred}-${suffix}`;
+  }
+
+  return candidate;
 }
 
 function localizedFromAdminInputs(az: string, en: string, ru: string) {
@@ -286,7 +306,11 @@ function resolveBadge(form: ProductForm) {
   };
 }
 
-function formToProduct(form: ProductForm, baseProduct?: Product | null): Product {
+function formToProduct(
+  form: ProductForm,
+  baseProduct?: Product | null,
+  catalogFilters: CatalogFilters = emptyCatalogFilters
+): Product {
   const imageList = form.imagesText.split('\n').map(item => item.trim()).filter(Boolean);
   const image = form.image.trim() || imageList[0] || '/products/cat-food.svg';
   const nameAz = form.nameAz.trim() || 'Yeni məhsul';
@@ -294,6 +318,13 @@ function formToProduct(form: ProductForm, baseProduct?: Product | null): Product
   const slug = baseProduct?.slug || slugify(nameAz);
   const variants = form.variantsEnabled ? variantsFromFormRows(form.variants) : [];
   const firstVariantPrice = variants[0]?.price;
+  const departmentKey = form.departmentKey || getDepartmentForProductType(form.typeKey);
+  const departmentLabel = getCatalogDepartmentOptions(catalogFilters)
+    .find(option => option.key === departmentKey)?.label
+    || baseProduct?.departmentLabel;
+  const typeLabel = getCatalogSubcategoryOptionsForDepartment('all', catalogFilters)
+    .find(option => option.key === form.typeKey)?.label
+    || baseProduct?.typeLabel;
 
   return {
     id: baseProduct?.id || slug,
@@ -304,8 +335,10 @@ function formToProduct(form: ProductForm, baseProduct?: Product | null): Product
       ru: form.nameRu.trim() || nameAz
     },
     categoryKey: form.categoryKey || categoryKeyFromType(form.typeKey),
-    departmentKey: form.departmentKey || getDepartmentForProductType(form.typeKey),
+    departmentKey,
+    departmentLabel,
     typeKey: form.typeKey,
+    typeLabel,
     audiences: form.audiences.length ? form.audiences : ['allPets'],
     collections: form.collections,
     price: Number(form.price || firstVariantPrice || 0),
@@ -679,9 +712,14 @@ export default function AdminPage() {
       return;
     }
 
-    const key = slugifyAdminOption(label.az, 'custom-section');
-    const existingDepartment = customFilters.departments.find(department => department.key === key);
-    const defaultSubcategoryKey = slugifyAdminOption(key, 'custom-sub');
+    const preferredKey = slugifyAdminOption(label.az, 'section');
+    const existingDepartment = customFilters.departments.find(department => department.key === preferredKey);
+    const usedDepartmentKeys = new Set(getCatalogDepartmentOptions(customFilters).map(option => option.key));
+    const key = existingDepartment?.key || uniqueAdminOptionKey(preferredKey, usedDepartmentKeys);
+    const usedSubcategoryKeys = new Set(
+      getCatalogSubcategoryOptionsForDepartment('all', customFilters).map(option => option.key)
+    );
+    const defaultSubcategoryKey = uniqueAdminOptionKey(key, usedSubcategoryKeys);
     const nextFilters = normalizeCatalogFilters({
       ...customFilters,
       departments: existingDepartment ? customFilters.departments : [...customFilters.departments, { key, label }],
@@ -712,10 +750,21 @@ export default function AdminPage() {
     }
 
     const departmentKey = filterForm.subDepartmentKey || selectedDepartment;
-    const key = slugifyAdminOption(`${departmentKey}-${label.az}`, 'custom-sub');
+    const preferredKey = slugifyAdminOption(label.az, 'subcategory');
+    const matchingSubcategory = customFilters.subcategories.find(subcategory => (
+      subcategory.departmentKey === departmentKey
+      && subcategory.label.az.toLocaleLowerCase('az-AZ') === label.az.toLocaleLowerCase('az-AZ')
+    ));
+    const usedSubcategoryKeys = new Set(
+      getCatalogSubcategoryOptionsForDepartment('all', customFilters).map(option => option.key)
+    );
+    const scopedPreferredKey = usedSubcategoryKeys.has(preferredKey)
+      ? slugifyAdminOption(`${departmentKey}-${preferredKey}`, 'subcategory')
+      : preferredKey;
+    const key = matchingSubcategory?.key || uniqueAdminOptionKey(scopedPreferredKey, usedSubcategoryKeys);
     const nextFilters = normalizeCatalogFilters({
       ...customFilters,
-      subcategories: customFilters.subcategories.some(subcategory => subcategory.key === key)
+      subcategories: matchingSubcategory
         ? customFilters.subcategories
         : [...customFilters.subcategories, { key, departmentKey, label }]
     });
@@ -746,7 +795,10 @@ export default function AdminPage() {
     });
   }
 
-  const previewProduct = useMemo(() => formToProduct(form, editingProduct), [form, editingProduct]);
+  const previewProduct = useMemo(
+    () => formToProduct(form, editingProduct, customFilters),
+    [form, editingProduct, customFilters]
+  );
 
   async function checkSession() {
     const response = await fetch('/api/admin/me', { cache: 'no-store' }).catch(() => null);
@@ -953,7 +1005,7 @@ export default function AdminPage() {
 
     setSaving(true);
     setMessage('');
-    const product = formToProduct(form, editingProduct);
+    const product = formToProduct(form, editingProduct, customFilters);
 
     if (!editingProduct) {
       const uniqueSlug = makeUniqueSlug(product.slug, adminProducts);

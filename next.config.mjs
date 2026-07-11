@@ -2,6 +2,10 @@
 const oneYear = 31536000;
 
 const nextConfig = {
+  experimental: {
+    cpus: 2,
+    staticGenerationMaxConcurrency: 2
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: oneYear,

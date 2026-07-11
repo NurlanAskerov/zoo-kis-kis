@@ -6,8 +6,8 @@ import { useEffect, useState, type MouseEvent } from 'react';
 import { CheckCircle2, Heart, Share2, Truck } from 'lucide-react';
 import {
   getAudienceLabel,
-  getCatalogProductTypeLabel,
   getProductCategoryLabel,
+  getProductTypeDisplayLabel,
   stockLabels,
   type AudienceKey,
   type Product,
@@ -112,12 +112,15 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
   const { profile } = useCustomerProfile();
   const { toggleFavorite, isFavorite } = useCart();
   const [remoteProduct, setRemoteProduct] = useState<Product | undefined>(initialProduct);
-  const [remoteLoading, setRemoteLoading] = useState(!initialProduct);
-  const [remoteTried, setRemoteTried] = useState(Boolean(initialProduct));
+  const [remoteLoading, setRemoteLoading] = useState(true);
+  const [remoteTried, setRemoteTried] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState('');
 
   const catalogProduct = findProduct(slug);
-  const product = catalogProduct ?? remoteProduct;
+  // Məhsul detal səhifəsində API-dən gələn ən son məlumat kataloq kontekstindən üstündür.
+  // Beləliklə başqa mühitdə (məsələn lokal admin paneldə) edilən DB dəyişiklikləri
+  // production səhifəsində köhnə client state ilə örtülmür.
+  const product = remoteTried ? remoteProduct : (remoteProduct ?? catalogProduct);
   const productVariants = product ? getProductVariants(product) : [];
 
   useEffect(() => {
@@ -135,40 +138,61 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
 
   useEffect(() => {
     setRemoteProduct(initialProduct);
-    setRemoteLoading(!initialProduct);
-    setRemoteTried(Boolean(initialProduct));
+    setRemoteLoading(true);
+    setRemoteTried(false);
   }, [initialProduct, slug]);
 
   useEffect(() => {
-    if (product || catalogLoading || remoteTried) return;
-
     let cancelled = false;
+    let requestNumber = 0;
 
     async function loadProduct() {
+      const currentRequest = ++requestNumber;
       setRemoteLoading(true);
+
       try {
-        const response = await fetch(`/api/products/${encodeURIComponent(slug)}`, { cache: 'no-store' });
+        const response = await fetch(
+          `/api/products/${encodeURIComponent(slug)}?ts=${Date.now()}`,
+          {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+          }
+        );
         const data = await response.json().catch(() => ({})) as { product?: Product | null };
 
-        if (!cancelled && data.product) {
-          setRemoteProduct(data.product);
+        if (!cancelled && currentRequest === requestNumber) {
+          setRemoteProduct(response.ok && data.product ? data.product : undefined);
         }
       } catch {
-        // boş qalsın, fake məhsul göstərməyək
+        // Mövcud kataloq məlumatını ilk sorğu tamamlananadək saxlayırıq.
       } finally {
-        if (!cancelled) {
+        if (!cancelled && currentRequest === requestNumber) {
           setRemoteLoading(false);
           setRemoteTried(true);
         }
       }
     }
 
-    loadProduct();
+    const refreshProduct = () => {
+      void loadProduct();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshProduct();
+    };
+
+    refreshProduct();
+    window.addEventListener('focus', refreshProduct);
+    window.addEventListener('pageshow', refreshProduct);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', refreshProduct);
+      window.removeEventListener('pageshow', refreshProduct);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [product, catalogLoading, remoteTried, slug]);
+  }, [slug]);
 
   const gallery = product ? (product.images?.length ? product.images : [product.image || '/products/cat-food.svg']) : [];
   const [selectedImage, setSelectedImage] = useState(gallery[0] ?? '');
@@ -297,7 +321,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
             {productDescription ? <p>{productDescription}</p> : null}
             <div className="product-tags detail-tags">
               {productAudiences.map(audience => <span key={audience}>{getAudienceLabel(audience, lang)}</span>)}
-              <span>{getCatalogProductTypeLabel(product.typeKey, lang, catalogFilters)}</span>
+              <span>{getProductTypeDisplayLabel(product, lang, catalogFilters)}</span>
               <span className={selectedStock === 'preOrder' ? 'muted-stock' : ''}>{stockLabels[selectedStock]?.[lang] ?? stockLabels.inStock[lang]}</span>
             </div>
             <div className="detail-price">

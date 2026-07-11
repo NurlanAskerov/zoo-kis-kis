@@ -1,6 +1,6 @@
 'use client';
 
-import { getAudienceLabel, getCatalogProductTypeLabel, type Product } from '@/lib/data';
+import { getAudienceLabel, getProductTypeDisplayLabel, type Product } from '@/lib/data';
 import { useCatalog } from './CatalogProvider';
 import { useCart } from './cart-context';
 import { useLanguage } from './LanguageProvider';
@@ -33,7 +33,7 @@ export function CartRecommendationSections({ cartProducts }: { cartProducts: Pro
   return (
     <div className="recommendation-stack cart-recommendations">
       <RecommendationShelf title={t('favoriteProducts')} items={favoriteItems} limit={4} />
-      <RecommendationShelf title={t('sameTypeProducts')} subtitle={getCatalogProductTypeLabel(anchor.typeKey, lang, catalogFilters)} items={sameType} limit={4} />
+      <RecommendationShelf title={t('sameTypeProducts')} subtitle={getProductTypeDisplayLabel(anchor, lang, catalogFilters)} items={sameType} limit={4} />
       <RecommendationShelf title={t('moreForThisPet')} subtitle={primaryAudience ? getAudienceLabel(primaryAudience, lang) : undefined} items={uniqueProducts(sameAudience)} limit={4} />
     </div>
   );

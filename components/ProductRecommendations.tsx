@@ -1,6 +1,6 @@
 'use client';
 
-import { getAudienceLabel, getCatalogProductTypeLabel, type Product } from '@/lib/data';
+import { getAudienceLabel, getProductTypeDisplayLabel, type Product } from '@/lib/data';
 import { useCatalog } from './CatalogProvider';
 import { useCart } from './cart-context';
 import { useLanguage } from './LanguageProvider';
@@ -30,7 +30,7 @@ export function ProductRecommendations({ product }: { product: Product }) {
       />
       <RecommendationShelf
         title={t('sameTypeProducts')}
-        subtitle={getCatalogProductTypeLabel(product.typeKey, lang, catalogFilters)}
+        subtitle={getProductTypeDisplayLabel(product, lang, catalogFilters)}
         items={sameType}
         limit={4}
       />

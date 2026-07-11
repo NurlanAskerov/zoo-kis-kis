@@ -11,7 +11,7 @@ import {
   type ProductTypeKey,
   type StockKey
 } from './data';
-import { normalizeCatalogFilters } from './catalog-filters';
+import { cleanLegacyCatalogKey, normalizeCatalogFilters } from './catalog-filters';
 
 let cachedClient: ReturnType<typeof createClient> | null = null;
 let cachedSchemaMode: 'wide' | 'legacy' | null = null;
@@ -44,6 +44,15 @@ function cleanCatalogKey(value: unknown, fallback = '') {
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 140);
+
+  return clean || fallback;
+}
+
+function cleanStoredCatalogKey(value: unknown, fallback = '') {
+  const raw = String(value || '').trim();
+  const clean = /^custom-(?:section|sub)-/i.test(raw)
+    ? cleanLegacyCatalogKey(raw)
+    : cleanCatalogKey(raw);
 
   return clean || fallback;
 }
@@ -130,7 +139,7 @@ type PublicProductRuntimeCache = {
   product?: Product;
 };
 
-const DEFAULT_PUBLIC_PRODUCTS_RUNTIME_CACHE_MS = 30_000;
+const DEFAULT_PUBLIC_PRODUCTS_RUNTIME_CACHE_MS = 0;
 let publicProductsRuntimeCache: PublicProductsRuntimeCache | null = null;
 const publicProductBySlugRuntimeCache = new Map<string, PublicProductRuntimeCache>();
 
@@ -340,6 +349,69 @@ async function ensureCatalogSettingsTable() {
   return true;
 }
 
+async function migrateLegacyCatalogProductKeys() {
+  if (!hasDatabaseConfig()) return 0;
+
+  const mode = await getProductSchemaMode();
+  if (mode !== 'wide') return 0;
+
+  const result = await getTursoClient().execute(`
+    SELECT id, department, subcategory, extra_json
+    FROM products
+    WHERE department LIKE 'custom-section-%'
+       OR department LIKE 'custom-sub-%'
+       OR subcategory LIKE 'custom-section-%'
+       OR subcategory LIKE 'custom-sub-%'
+       OR extra_json LIKE '%custom-section-%'
+       OR extra_json LIKE '%custom-sub-%'
+  `);
+
+  let migrated = 0;
+
+  for (const rawRow of result.rows) {
+    const row = rawRow as Record<string, unknown>;
+    const id = String(row.id || '').trim();
+    if (!id) continue;
+
+    const currentDepartment = String(row.department || '').trim();
+    const currentSubcategory = String(row.subcategory || '').trim();
+    const department = cleanStoredCatalogKey(currentDepartment, currentDepartment);
+    const subcategory = cleanStoredCatalogKey(currentSubcategory, currentSubcategory);
+
+    const rawExtra = String(row.extra_json || '').trim();
+    let nextExtra = rawExtra;
+
+    if (rawExtra) {
+      try {
+        const extra = JSON.parse(rawExtra) as Record<string, unknown>;
+        if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+          if (extra.departmentKey) extra.departmentKey = cleanStoredCatalogKey(extra.departmentKey, String(extra.departmentKey));
+          if (extra.categoryKey) extra.categoryKey = cleanStoredCatalogKey(extra.categoryKey, String(extra.categoryKey));
+          if (extra.typeKey) extra.typeKey = cleanStoredCatalogKey(extra.typeKey, String(extra.typeKey));
+          nextExtra = JSON.stringify(extra);
+        }
+      } catch {
+        // Keep malformed legacy JSON untouched while still fixing table columns.
+      }
+    }
+
+    if (
+      department === currentDepartment
+      && subcategory === currentSubcategory
+      && nextExtra === rawExtra
+    ) continue;
+
+    await getTursoClient().execute({
+      sql: 'UPDATE products SET department = ?, subcategory = ?, extra_json = ? WHERE id = ?',
+      args: [department, subcategory, nextExtra || null, id]
+    });
+    migrated += 1;
+  }
+
+  if (migrated) clearProductRuntimeCache();
+  return migrated;
+}
+
 export async function getCatalogFiltersFromDb(): Promise<CatalogFilters> {
   if (!hasDatabaseConfig()) return normalizeCatalogFilters({});
 
@@ -349,11 +421,28 @@ export async function getCatalogFiltersFromDb(): Promise<CatalogFilters> {
     args: ['custom-filters']
   });
 
-  if (!result.rows[0]) return normalizeCatalogFilters({});
+  if (!result.rows[0]) {
+    await migrateLegacyCatalogProductKeys();
+    return normalizeCatalogFilters({});
+  }
 
   try {
-    return normalizeCatalogFilters(JSON.parse(String((result.rows[0] as Record<string, unknown>).payload || '{}')));
+    const rawPayload = String((result.rows[0] as Record<string, unknown>).payload || '{}');
+    const parsed = JSON.parse(rawPayload);
+    const filters = normalizeCatalogFilters(parsed);
+    const normalizedPayload = JSON.stringify(filters);
+
+    if (normalizedPayload !== JSON.stringify(parsed)) {
+      await getTursoClient().execute({
+        sql: 'UPDATE catalog_settings SET payload = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
+        args: [normalizedPayload, 'custom-filters']
+      });
+    }
+
+    await migrateLegacyCatalogProductKeys();
+    return filters;
   } catch {
+    await migrateLegacyCatalogProductKeys();
     return normalizeCatalogFilters({});
   }
 }
@@ -372,8 +461,16 @@ export async function saveCatalogFiltersToDb(value: unknown): Promise<CatalogFil
     args: ['custom-filters', JSON.stringify(filters)]
   });
 
+  await migrateLegacyCatalogProductKeys();
+  clearProductRuntimeCache();
   return filters;
 }
+
+// Backward-compatible exports for deployments that still contain the old
+// /api/custom-filters routes. Both endpoint names now use the same DB record.
+export type AdminCustomFilters = CatalogFilters;
+export const getCustomFiltersFromDb = getCatalogFiltersFromDb;
+export const upsertCustomFiltersToDb = saveCatalogFiltersToDb;
 
 async function tableColumns(table: string) {
   const result = await getTursoClient().execute(`PRAGMA table_info(${table})`);
@@ -504,7 +601,7 @@ function typeFromDb(value: unknown): ProductTypeKey {
     grooming: 'grooming',
     care: 'care'
   };
-  return map[raw] || cleanCatalogKey(raw, 'care');
+  return map[raw] || cleanStoredCatalogKey(raw, 'care');
 }
 
 function collectionsFromRow(row: Record<string, unknown>): ProductCollectionKey[] {
@@ -548,6 +645,21 @@ function getString(row: Record<string, unknown>, key: string) {
   return String(row[key] || '').trim();
 }
 
+function applyCatalogLabels(product: Product, filters: CatalogFilters): Product {
+  const customSubcategory = filters.subcategories.find(option => option.key === product.typeKey);
+  const departmentKey = customSubcategory?.departmentKey
+    || product.departmentKey
+    || getDepartmentForProductType(product.typeKey);
+  const customDepartment = filters.departments.find(option => option.key === departmentKey);
+
+  return {
+    ...product,
+    departmentKey,
+    departmentLabel: customDepartment?.label || product.departmentLabel,
+    typeLabel: customSubcategory?.label || product.typeLabel
+  };
+}
+
 export function normalizeProduct(input: Partial<Product>): Product {
   const fallback = products[0];
   const nameAz = String(input.name?.az || '').trim() || 'Yeni məhsul';
@@ -558,8 +670,8 @@ export function normalizeProduct(input: Partial<Product>): Product {
     .replace(/^-+|-+$/g, '') || `product-${Date.now()}`;
 
   const image = input.image || input.images?.[0] || '/products/cat-food.svg';
-  const typeKey = cleanCatalogKey(input.typeKey, fallback.typeKey);
-  const departmentKey = cleanCatalogKey(input.departmentKey, getDepartmentForProductType(typeKey));
+  const typeKey = cleanStoredCatalogKey(input.typeKey, fallback.typeKey);
+  const departmentKey = cleanStoredCatalogKey(input.departmentKey, getDepartmentForProductType(typeKey));
 
   const normalizedAudiences: AudienceKey[] = (input.audiences ?? [])
     .filter((item): item is AudienceKey => validAudiences.has(item as AudienceKey));
@@ -573,9 +685,19 @@ export function normalizeProduct(input: Partial<Product>): Product {
     id: input.id || slug,
     slug,
     name: input.name ?? { az: nameAz, en: nameAz, ru: nameAz },
-    categoryKey: input.categoryKey || categoryKeyFromType(typeKey),
+    categoryKey: cleanStoredCatalogKey(input.categoryKey, categoryKeyFromType(typeKey)),
     departmentKey,
+    departmentLabel: localizedOptional(
+      input.departmentLabel?.az || input.departmentLabel?.en || input.departmentLabel?.ru,
+      input.departmentLabel?.en,
+      input.departmentLabel?.ru
+    ),
     typeKey,
+    typeLabel: localizedOptional(
+      input.typeLabel?.az || input.typeLabel?.en || input.typeLabel?.ru,
+      input.typeLabel?.en,
+      input.typeLabel?.ru
+    ),
     audiences: normalizedAudiences.length ? normalizedAudiences : ['allPets'],
     collections: normalizedCollections,
     price: Number(input.price || normalizedVariants?.[0]?.price || 0),
@@ -634,7 +756,7 @@ function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<st
   const images = tableImages.length ? tableImages : (jsonImages.length ? jsonImages : (imageUrl ? [imageUrl] : []));
   const mainImage = images[0] || '/products/cat-food.svg';
   const extra = safeJson(row.extra_json);
-  const departmentKey = cleanCatalogKey(row.department || extra.departmentKey, getDepartmentForProductType(typeKey));
+  const departmentKey = cleanStoredCatalogKey(row.department || extra.departmentKey, getDepartmentForProductType(typeKey));
   const detailsFromExtra = extra.details && typeof extra.details === 'object' ? extra.details : undefined;
   const details = langs.reduce((acc, lang) => {
     const extraItems = Array.isArray(detailsFromExtra?.[lang]) ? detailsFromExtra[lang] : [];
@@ -650,9 +772,11 @@ function wideProductFromRow(row: Record<string, unknown>, imagesMap = new Map<st
     id: String(row.id || row.slug),
     slug: getString(row, 'slug') || slugify(getString(row, 'name_az')),
     name: localized(row.name_az, row.name_en, row.name_ru),
-    categoryKey: cleanCatalogKey(extra.categoryKey, categoryKeyFromType(typeKey)),
+    categoryKey: cleanStoredCatalogKey(extra.categoryKey, categoryKeyFromType(typeKey)),
     departmentKey,
+    departmentLabel: extra.departmentLabel,
     typeKey,
+    typeLabel: extra.typeLabel,
     audiences: parseAudiences(row.audience),
     collections: collectionsFromRow(row),
     price: Number(row.price || 0),
@@ -695,6 +819,9 @@ export async function getProductsFromDb(includeInactive = false) {
     productList = includeInactive ? normalized : normalized.filter(product => product.active !== false);
   }
 
+  const catalogFilters = await getCatalogFiltersFromDb();
+  productList = productList.map(product => applyCatalogLabels(product, catalogFilters));
+
   if (!includeInactive) setCachedPublicProducts(productList);
 
   return productList;
@@ -725,7 +852,9 @@ export async function getProductBySlugFromDb(slug: string, includeInactive = tru
       args: [cleanSlug]
     });
     const product = result.rows[0] ? legacyProductFromRow(result.rows[0] as Record<string, unknown>) ?? undefined : undefined;
-    const visibleProduct = includeInactive ? product : (product?.active === false ? undefined : product);
+    const catalogFilters = product ? await getCatalogFiltersFromDb() : normalizeCatalogFilters({});
+    const labeledProduct = product ? applyCatalogLabels(product, catalogFilters) : undefined;
+    const visibleProduct = includeInactive ? labeledProduct : (labeledProduct?.active === false ? undefined : labeledProduct);
     if (!includeInactive) setCachedPublicProductBySlug(cleanSlug, visibleProduct);
     return visibleProduct;
   }
@@ -743,7 +872,8 @@ export async function getProductBySlugFromDb(slug: string, includeInactive = tru
 
   const productId = String(row.id || row.slug || '').trim();
   const imagesMap = await getImagesMap(productId ? [productId] : []);
-  const product = wideProductFromRow(row, imagesMap);
+  const catalogFilters = await getCatalogFiltersFromDb();
+  const product = applyCatalogLabels(wideProductFromRow(row, imagesMap), catalogFilters);
   const visibleProduct = includeInactive ? product : (product.active === false ? undefined : product);
 
   if (!includeInactive) setCachedPublicProductBySlug(cleanSlug, visibleProduct);
@@ -781,6 +911,8 @@ export async function upsertProduct(product: Product) {
   const extra = {
     categoryKey: normalized.categoryKey,
     departmentKey: department,
+    departmentLabel: normalized.departmentLabel,
+    typeLabel: normalized.typeLabel,
     collections,
     details: normalized.details,
     variants: normalized.variants ?? []
