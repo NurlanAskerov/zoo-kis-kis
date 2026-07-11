@@ -281,11 +281,11 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
               <Image
                 src={displayImage}
                 alt={productTitle}
-                width={620}
-                height={620}
+                width={1240}
+                height={1240}
                 priority
-                quality={82}
-                sizes="(max-width: 768px) 94vw, 620px"
+                quality={94}
+                sizes="(max-width: 768px) 94vw, 1240px"
                 draggable={false}
                 unoptimized={displayImage.startsWith('data:')}
               />
@@ -305,7 +305,7 @@ export function ProductDetailClient({ product: initialProduct, slug }: { product
                       alt={`${productTitle} ${index + 1}`}
                       width={88}
                       height={88}
-                      quality={68}
+                      quality={82}
                       sizes="88px"
                       draggable={false}
                       unoptimized={image.startsWith('data:')}

@@ -89,7 +89,7 @@ export function ProductCard({ product }: { product: Product }) {
           unoptimized={mainIsData}
           width={320}
           height={320}
-          quality={76}
+          quality={88}
           sizes="(max-width: 620px) 82vw, (max-width: 980px) 42vw, 260px"
           draggable={false}
           loading="lazy"
@@ -114,7 +114,7 @@ export function ProductCard({ product }: { product: Product }) {
             unoptimized={hoverIsData}
             width={320}
             height={320}
-            quality={72}
+            quality={85}
             sizes="(max-width: 620px) 82vw, (max-width: 980px) 42vw, 260px"
             draggable={false}
             loading="lazy"

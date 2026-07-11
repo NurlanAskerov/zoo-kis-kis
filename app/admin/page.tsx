@@ -409,38 +409,36 @@ function createResizedCanvas(source: HTMLImageElement, maxWidth: number, maxHeig
 }
 
 async function bestCompressedImage(source: HTMLImageElement) {
+  // Məhsul detalındakı 2x zoom üçün mənbə şəklin uzun tərəfini mümkün qədər
+  // 2400-2560px saxlayırıq. Əvvəlki 1200-1400px / 460-650KB limiti şəkli
+  // həm upload zamanı, həm də Next/Image optimizasiyasında iki dəfə bulanıqlaşdırırdı.
   const variants = [
-    { maxWidth: 1400, maxHeight: 1400, quality: 0.84, target: 650 * 1024 },
-    { maxWidth: 1400, maxHeight: 1400, quality: 0.78, target: 650 * 1024 },
-    { maxWidth: 1280, maxHeight: 1280, quality: 0.78, target: 520 * 1024 },
-    { maxWidth: 1200, maxHeight: 1200, quality: 0.74, target: 460 * 1024 }
+    { maxWidth: 2560, maxHeight: 2560, quality: 0.94, target: 2.8 * 1024 * 1024 },
+    { maxWidth: 2560, maxHeight: 2560, quality: 0.90, target: 2.8 * 1024 * 1024 },
+    { maxWidth: 2200, maxHeight: 2200, quality: 0.90, target: 2.4 * 1024 * 1024 },
+    { maxWidth: 2000, maxHeight: 2000, quality: 0.88, target: 2.0 * 1024 * 1024 }
   ];
 
   let bestBlob: Blob | null = null;
-  let bestExtension = 'webp';
-  let bestType = 'image/webp';
 
   for (const variant of variants) {
     const canvas = createResizedCanvas(source, variant.maxWidth, variant.maxHeight);
     const blob = await canvasToBlob(canvas, 'image/webp', variant.quality);
 
     if (!blob) continue;
-
     bestBlob = blob;
-    bestExtension = 'webp';
-    bestType = 'image/webp';
 
     if (blob.size <= variant.target) {
-      return { blob, extension: bestExtension, type: bestType };
+      return { blob, extension: 'webp', type: 'image/webp' };
     }
   }
 
   if (bestBlob) {
-    return { blob: bestBlob, extension: bestExtension, type: bestType };
+    return { blob: bestBlob, extension: 'webp', type: 'image/webp' };
   }
 
-  const fallbackCanvas = createResizedCanvas(source, 1280, 1280);
-  const fallbackBlob = await canvasToBlob(fallbackCanvas, 'image/jpeg', 0.82);
+  const fallbackCanvas = createResizedCanvas(source, 2000, 2000);
+  const fallbackBlob = await canvasToBlob(fallbackCanvas, 'image/jpeg', 0.90);
 
   if (!fallbackBlob) throw new Error('Şəkil optimizasiya olunmadı. Başqa format seçin.');
 
@@ -452,11 +450,23 @@ async function optimizeImageForUpload(file: File) {
     throw new Error('HEIC/Live Photo formatı dəstəklənmir. Şəkli iPhone-da JPG kimi export edib yenidən seçin.');
   }
 
-  if (file.type === 'image/svg+xml') {
+  if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
     return { file, previewUrl: await fileToDataUrl(file) };
   }
 
   const source = await imageFromFile(file);
+  const isAlreadyWebReady =
+    ['image/jpeg', 'image/png', 'image/webp'].includes(file.type) &&
+    source.width <= 2560 &&
+    source.height <= 2560 &&
+    file.size <= 3 * 1024 * 1024;
+
+  // Keyfiyyətli və ölçüsü normal olan faylı yenidən canvas/WebP sıxılmasından
+  // keçirmirik. Beləcə JPEG/WebP artefaktları və şəffaf PNG kənarları qorunur.
+  if (isAlreadyWebReady) {
+    return { file, previewUrl: await fileToDataUrl(file) };
+  }
+
   const { blob, extension, type } = await bestCompressedImage(source);
 
   const safeBase = file.name
@@ -624,6 +634,7 @@ export default function AdminPage() {
   const [deletePendingSlugs, setDeletePendingSlugs] = useState<Set<string>>(() => new Set());
   const [customFilters, setCustomFilters] = useState<CatalogFilters>(emptyCatalogFilters);
   const [filterForm, setFilterForm] = useState<AdminFilterForm>(initialAdminFilterForm);
+  const [filterDeletePendingKey, setFilterDeletePendingKey] = useState('');
 
   const adminDepartmentOptions = useMemo(() => getCatalogDepartmentOptions(customFilters), [customFilters]);
 
@@ -775,6 +786,108 @@ export default function AdminPage() {
     const saved = await persistCustomFilters(nextFilters);
     if (saved === 'server') setMessage('Yeni alt bölmə əlavə edildi, məhsul formasında seçildi və serverdə saxlanıldı.');
     if (saved === 'local') setMessage('Yeni alt bölmə əlavə edildi və məhsul formasında seçildi. Database qoşulmadığı üçün hələlik yalnız bu brauzerdə saxlanıldı.');
+  }
+
+  async function deleteCustomDepartment(departmentKey: string) {
+    const department = customFilters.departments.find(option => option.key === departmentKey);
+    if (!department) return;
+
+    const linkedProducts = adminProducts.filter(product => (
+      product.departmentKey === departmentKey
+      || product.categoryKey === departmentKey
+      || getProductDepartmentKey(product, customFilters) === departmentKey
+    ));
+
+    if (linkedProducts.length > 0) {
+      setMessage(`“${department.label[lang]}” bölməsini silmək olmur. Bu bölməyə ${linkedProducts.length} məhsul bağlıdır. Əvvəl həmin məhsulları başqa bölməyə redaktə edin.`);
+      return;
+    }
+
+    const accepted = window.confirm(
+      `“${department.label[lang]}” bölməsi və ona aid bütün xüsusi alt bölmələr silinsin? Bu əməliyyatı geri qaytarmaq olmur.`
+    );
+    if (!accepted) return;
+
+    const pendingKey = `department:${departmentKey}`;
+    setFilterDeletePendingKey(pendingKey);
+
+    const nextFilters = normalizeCatalogFilters({
+      departments: customFilters.departments.filter(option => option.key !== departmentKey),
+      subcategories: customFilters.subcategories.filter(option => option.departmentKey !== departmentKey)
+    });
+
+    const fallbackDepartment = getCatalogDepartmentOptions(nextFilters)[0]?.key || 'food';
+    const fallbackSubcategory = getCatalogSubcategoryOptionsForDepartment(fallbackDepartment, nextFilters)[0]?.key || 'dryFood';
+
+    if (selectedDepartment === departmentKey) {
+      setForm(current => ({
+        ...current,
+        departmentKey: fallbackDepartment,
+        typeKey: fallbackSubcategory,
+        categoryKey: categoryKeyFromType(fallbackSubcategory)
+      }));
+    }
+
+    if (filterForm.subDepartmentKey === departmentKey) {
+      setFilterForm(current => ({ ...current, subDepartmentKey: fallbackDepartment }));
+    }
+
+    const saved = await persistCustomFilters(nextFilters);
+    if (saved === 'server') setMessage(`“${department.label[lang]}” bölməsi və ona aid alt bölmələr silindi.`);
+    if (saved === 'local') setMessage(`“${department.label[lang]}” bölməsi yalnız bu brauzerdən silindi. Database qoşulmayıb.`);
+    setFilterDeletePendingKey('');
+  }
+
+  async function deleteCustomSubcategory(subcategoryKey: string) {
+    const subcategory = customFilters.subcategories.find(option => option.key === subcategoryKey);
+    if (!subcategory) return;
+
+    const linkedProducts = adminProducts.filter(product => product.typeKey === subcategoryKey);
+    if (linkedProducts.length > 0) {
+      setMessage(`“${subcategory.label[lang]}” alt bölməsini silmək olmur. Bu alt bölməyə ${linkedProducts.length} məhsul bağlıdır. Əvvəl həmin məhsulları başqa alt bölməyə redaktə edin.`);
+      return;
+    }
+
+    const departmentIsCustom = customFilters.departments.some(option => option.key === subcategory.departmentKey);
+    const siblingSubcategories = customFilters.subcategories.filter(option => option.departmentKey === subcategory.departmentKey);
+    if (departmentIsCustom && siblingSubcategories.length <= 1) {
+      setMessage(`“${subcategory.label[lang]}” bu xüsusi bölmənin son alt bölməsidir. Onu ayrıca silmək əvəzinə yuxarıdakı bölməni silin.`);
+      return;
+    }
+
+    const accepted = window.confirm(`“${subcategory.label[lang]}” alt bölməsi silinsin?`);
+    if (!accepted) return;
+
+    const pendingKey = `subcategory:${subcategoryKey}`;
+    setFilterDeletePendingKey(pendingKey);
+    const nextFilters = normalizeCatalogFilters({
+      ...customFilters,
+      subcategories: customFilters.subcategories.filter(option => option.key !== subcategoryKey)
+    });
+
+    if (form.typeKey === subcategoryKey) {
+      const fallbackSubcategory = getCatalogSubcategoryOptionsForDepartment(subcategory.departmentKey, nextFilters)[0]?.key;
+      const fallbackDepartment = fallbackSubcategory
+        ? subcategory.departmentKey
+        : getCatalogDepartmentOptions(nextFilters)[0]?.key || 'food';
+      const fallbackType = fallbackSubcategory
+        || getCatalogSubcategoryOptionsForDepartment(fallbackDepartment, nextFilters)[0]?.key
+        || 'dryFood';
+
+      setForm(current => ({
+        ...current,
+        departmentKey: fallbackDepartment,
+        typeKey: fallbackType,
+        categoryKey: nextFilters.departments.some(option => option.key === fallbackDepartment)
+          ? fallbackDepartment
+          : categoryKeyFromType(fallbackType)
+      }));
+    }
+
+    const saved = await persistCustomFilters(nextFilters);
+    if (saved === 'server') setMessage(`“${subcategory.label[lang]}” alt bölməsi silindi.`);
+    if (saved === 'local') setMessage(`“${subcategory.label[lang]}” alt bölməsi yalnız bu brauzerdən silindi. Database qoşulmayıb.`);
+    setFilterDeletePendingKey('');
   }
 
   function updateVariantRow(id: string, patch: Partial<ProductVariantFormRow>) {
@@ -1278,7 +1391,7 @@ export default function AdminPage() {
                   <label className="file-upload-box add-image-box">
                     {uploadingImages ? <Loader2 size={22} className="spin" /> : <ImagePlus size={22} />}
                     <span>+ Şəkil əlavə et</span>
-                    <small>Şəkil seçilən kimi preview görünür. Böyük şəkillər keyfiyyəti qorunaraq WebP-ə çevrilir, ölçüsü azaldılır və upload arxa fonda R2-yə gedir.</small>
+                    <small>Şəkil seçilən kimi preview görünür. Keyfiyyətli JPG, PNG və WebP olduğu kimi qorunur. Yalnız çox böyük şəkillər yüksək keyfiyyətlə optimizasiya edilir və arxa fonda R2-yə yüklənir.</small>
                     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" multiple onChange={handleImages} />
                   </label>
 
@@ -1320,7 +1433,7 @@ export default function AdminPage() {
                   </div>
 
                   <details className="admin-custom-filter-box">
-                    <summary>+ Bölmə / alt bölmə əlavə et</summary>
+                    <summary>+ Bölmə / alt bölmə əlavə et və idarə et</summary>
                     <div className="admin-custom-filter-grid">
                       <div>
                         <p className="microcopy"><strong>Yeni bölmə</strong> — adı 3 dildə yazın.</p>
@@ -1343,6 +1456,76 @@ export default function AdminPage() {
                           <input className="input" value={filterForm.subRu} onChange={event => setFilterForm({ ...filterForm, subRu: event.target.value })} placeholder="Подраздел RU" />
                         </div>
                         <button className="tiny-btn admin-custom-filter-btn" type="button" onClick={addCustomSubcategory}>Alt bölmə əlavə et</button>
+                      </div>
+
+                      <div className="admin-custom-filter-manager">
+                        <p className="microcopy">
+                          <strong>Əlavə etdiyiniz bölmələr</strong>
+                          Səhv yaradılmış bölməni buradan silə bilərsiniz. Bölməyə məhsul bağlıdırsa, təhlükəsizlik üçün əvvəl məhsulu başqa bölməyə keçirmək tələb olunur.
+                        </p>
+                        {customFilters.departments.length ? (
+                          <div className="admin-custom-filter-list">
+                            {customFilters.departments.map(department => {
+                              const linkedCount = adminProducts.filter(product => (
+                                product.departmentKey === department.key
+                                || product.categoryKey === department.key
+                                || getProductDepartmentKey(product, customFilters) === department.key
+                              )).length;
+                              const pendingKey = `department:${department.key}`;
+
+                              return (
+                                <div className="admin-custom-filter-item" key={department.key}>
+                                  <span>
+                                    <strong>{department.label[lang]}</strong>
+                                    <small>{department.key}{linkedCount ? ` · ${linkedCount} məhsul` : ' · məhsul yoxdur'}</small>
+                                  </span>
+                                  <button
+                                    className="tiny-btn admin-custom-filter-delete"
+                                    type="button"
+                                    onClick={() => deleteCustomDepartment(department.key)}
+                                    disabled={Boolean(filterDeletePendingKey)}
+                                    aria-label={`${department.label[lang]} bölməsini sil`}
+                                  >
+                                    {filterDeletePendingKey === pendingKey ? <Loader2 size={15} className="spin" /> : <Trash2 size={15} />}
+                                    Sil
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : <p className="admin-custom-filter-empty">Hələ xüsusi bölmə əlavə edilməyib.</p>}
+
+                        <p className="microcopy admin-custom-filter-subtitle">
+                          <strong>Əlavə etdiyiniz alt bölmələr</strong>
+                          Standart bölmələrə və yaratdığınız yeni bölmələrə əlavə olunan alt bölmələr.
+                        </p>
+                        {customFilters.subcategories.length ? (
+                          <div className="admin-custom-filter-list">
+                            {customFilters.subcategories.map(subcategory => {
+                              const linkedCount = adminProducts.filter(product => product.typeKey === subcategory.key).length;
+                              const pendingKey = `subcategory:${subcategory.key}`;
+
+                              return (
+                                <div className="admin-custom-filter-item" key={`${subcategory.departmentKey}:${subcategory.key}`}>
+                                  <span>
+                                    <strong>{subcategory.label[lang]}</strong>
+                                    <small>{getAdminDepartmentLabel(subcategory.departmentKey)} · {subcategory.key}{linkedCount ? ` · ${linkedCount} məhsul` : ''}</small>
+                                  </span>
+                                  <button
+                                    className="tiny-btn admin-custom-filter-delete"
+                                    type="button"
+                                    onClick={() => deleteCustomSubcategory(subcategory.key)}
+                                    disabled={Boolean(filterDeletePendingKey)}
+                                    aria-label={`${subcategory.label[lang]} alt bölməsini sil`}
+                                  >
+                                    {filterDeletePendingKey === pendingKey ? <Loader2 size={15} className="spin" /> : <Trash2 size={15} />}
+                                    Sil
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : <p className="admin-custom-filter-empty">Hələ xüsusi alt bölmə əlavə edilməyib.</p>}
                       </div>
                     </div>
                   </details>
